@@ -10,7 +10,7 @@ const usuariosSchema = new Schema(
       type: String,
       required: [true, "Apellido del usuario es requerido"],
     },
-    correo: {
+    email: {
       type: String,
       default: null,
     },

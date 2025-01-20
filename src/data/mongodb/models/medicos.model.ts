@@ -7,11 +7,6 @@ const medicosSchema = new Schema(
       ref: "Usuario",
       required: [true, "ID de Usuario es requerido"],
     },
-    especialidad: {
-      type: String,
-      required: [true, "Especialidad del Medico es requerido"],
-      default: "Cuidador",
-    },
     experiencia_anios: {
       type: Number,
       required: [true, "Experiencia del Medico es requerido"],

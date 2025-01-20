@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 const rolesSchema = new Schema(
   {
-    nombre: {
+    rolName: {
       type: String,
       required: [true, "Nombre del rol es requerido"],
     },
