@@ -7,11 +7,6 @@ const pacienteSchema = new Schema(
       ref: "Usuario",
       required: [true, "ID de Usuario es requerido"],
     },
-    id_medico: {
-      type: Schema.Types.ObjectId,
-      ref: "Medico",
-      required: [true, "ID de Medico es requerido"],
-    },
     edad: {
       type: Number,
       required: [true, "edad del paciente es requerido"],
@@ -19,6 +14,10 @@ const pacienteSchema = new Schema(
     genero: {
       type: String,
       required: [true, "Genero del paciente es requerido"],
+      enum: {
+        values: ["Masculino", "Femenino"],
+        message: "El género debe ser 'Masculino' o 'Femenino'",
+      },
     },
     deletedAt: {
       type: Date,

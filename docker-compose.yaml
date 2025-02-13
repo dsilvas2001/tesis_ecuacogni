@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      PORT: ${PORT}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASS: ${MONGO_PASS}
+      MONGO_URL: ${MONGO_URL}
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      JWT_SEED: ${JWT_SEED}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    volumes:
+      - .:/usr/src/app
+    command: ["npm", "start"]

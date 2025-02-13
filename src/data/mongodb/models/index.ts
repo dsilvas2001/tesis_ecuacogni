@@ -11,6 +11,7 @@ export * from "./pacientes.model";
 export * from "./medicos.model";
 export * from "./sesion-usuario.model";
 export * from "./signos-vitales.model";
+export * from "./referencias-signosv.model";
 
 //REALIZANDO EJERCICIO
 

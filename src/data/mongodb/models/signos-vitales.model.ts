@@ -15,13 +15,13 @@ const signosVitalesSchema = new Schema(
       type: Number,
       required: [true, "Frecuencia cardíaca es requerida"],
     },
-    temperatura: {
-      type: Number,
-      required: [true, "Temperatura es requerida"],
-    },
     frecuencia_respiratoria: {
       type: Number,
       required: [true, "Frecuencia respiratoria es requerida"],
+    },
+    temperatura: {
+      type: Number,
+      required: [true, "Temperatura es requerida"],
     },
     deletedAt: {
       type: Date,
