@@ -22,18 +22,6 @@ export class ReferenciaSignosVDatasourceImpl
     try {
       // Crear un nuevo documento en la base de datos usando el modelo
 
-      console.log("referenciaSignosVDto");
-      console.log("referenciaSignosVDto");
-      console.log(referenciaSignosVDto);
-
-      const pacientes = await PacientesModel.findById(
-        referenciaSignosVDto.id_paciente
-      );
-
-      if (!pacientes) {
-        throw CustomError.badRequest("Paciente not found");
-      }
-
       const count_paciente_referencia =
         (await ReferenciaSignosVitalesModel.countDocuments({
           id_paciente: referenciaSignosVDto.id_paciente,
@@ -44,6 +32,14 @@ export class ReferenciaSignosVDatasourceImpl
         throw CustomError.badRequest(
           "Paciente ya tiene agregada la referencia"
         );
+      }
+
+      const pacientes = await PacientesModel.findById(
+        referenciaSignosVDto.id_paciente
+      );
+
+      if (!pacientes) {
+        throw CustomError.badRequest("Paciente not found");
       }
 
       const nuevaReferencia = new ReferenciaSignosVitalesModel({

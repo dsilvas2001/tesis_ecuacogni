@@ -6,6 +6,7 @@ export * from "./datasources/openai.datasource";
 export * from "./datasources/usuarios.datasource";
 export * from "./datasources/paciente.datasource";
 export * from "./datasources/referencias-signosv.datasource";
+export * from "./datasources/signos-vitales.datasource";
 
 // DTOS
 
@@ -16,6 +17,7 @@ export * from "./dtos/openai.dto";
 export * from "./dtos/usuarios.dto";
 export * from "./dtos/paciente.dto";
 export * from "./dtos/referencias-signosv.dto";
+export * from "./dtos/signos-vitales.dto";
 
 // Entities
 
@@ -28,6 +30,7 @@ export * from "./entities/openai.entity";
 export * from "./entities/usuarios.entity";
 export * from "./entities/paciente.entity";
 export * from "./entities/referencias-signosv.entity";
+export * from "./entities/signos-vitales.entity";
 
 // Repositories
 export * from "./repositories/scraper-general.repository";
@@ -36,6 +39,7 @@ export * from "./repositories/categorias.repository";
 export * from "./repositories/usuarios.repository";
 export * from "./repositories/paciente.repository";
 export * from "./repositories/referencias-signosv.repository";
+export * from "./repositories/signos-vitales.repository";
 
 // Use Cases
 
@@ -44,7 +48,9 @@ export * from "./use-cases/categorias.use-case";
 export * from "./use-cases/scraper-general.use-case";
 export * from "./use-cases/usuario.use-case";
 export * from "./use-cases/referencias-signosv.use-case";
+export * from "./use-cases/signos-vitales.use-case";
 
 // Zod
 export * from "./zods/categoria.zod";
 export * from "./zods/ejercicio.zod";
+export * from "./zods/signos-vitales.zod";
