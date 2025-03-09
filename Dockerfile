@@ -1,24 +1,47 @@
-# Etapa de compilación
+# Stage 1: Build
 FROM node:20.15.0-alpine as builder
+
+# Set working directory
 WORKDIR /app
+
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
-COPY . . 
-RUN npm run build 
 
-# Etapa de producción
-FROM node:alpine as production
+# Copy the rest of the application code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Stage 2: Production
+FROM node:20.15.0-alpine as production
+
+# Set working directory
 WORKDIR /app
 
+# Copy necessary files from the builder stage
 COPY --from=builder /app/node_modules ./node_modules
-COPY package*.json ./
+COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
 
-# Configurar entorno de producción
-ENV NODE_ENV=production
+# Install Chrome and dependencies for Puppeteer (if needed)
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
-# Exponer el puerto
+# Set environment variables
+ENV NODE_ENV=production
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Expose the port
 EXPOSE 3000
 
-# Comando para iniciar la aplicación
-CMD [ "node", "dist/app.js" ]
+# Command to start the application
+CMD ["node", "dist/app.js"]
