@@ -1,5 +1,8 @@
 import { SignosVitalesDto } from "../dtos/signos-vitales.dto";
-import { SignosVitalesEntity } from "../entities/signos-vitales.entity";
+import {
+  CountResultSignosV,
+  SignosVitalesEntity,
+} from "../entities/signos-vitales.entity";
 
 export abstract class SignosVitalesRepository {
   abstract register(
@@ -22,5 +25,7 @@ export abstract class SignosVitalesRepository {
     fecha: string
   ): Promise<SignosVitalesEntity>;
 
-  // abstract delete(id_paciente: string): Promise<string>;
+  abstract countAll(fecha: string): Promise<CountResultSignosV>;
+
+  abstract delete(id_paciente: string, fecha: string): Promise<string>;
 }

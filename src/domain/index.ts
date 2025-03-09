@@ -7,6 +7,7 @@ export * from "./datasources/usuarios.datasource";
 export * from "./datasources/paciente.datasource";
 export * from "./datasources/referencias-signosv.datasource";
 export * from "./datasources/signos-vitales.datasource";
+export * from "./datasources/ejercicio-paciente.datasource";
 
 // DTOS
 
@@ -40,6 +41,7 @@ export * from "./repositories/usuarios.repository";
 export * from "./repositories/paciente.repository";
 export * from "./repositories/referencias-signosv.repository";
 export * from "./repositories/signos-vitales.repository";
+export * from "./repositories/ejercicio-paciente.repository";
 
 // Use Cases
 
@@ -49,6 +51,7 @@ export * from "./use-cases/scraper-general.use-case";
 export * from "./use-cases/usuario.use-case";
 export * from "./use-cases/referencias-signosv.use-case";
 export * from "./use-cases/signos-vitales.use-case";
+export * from "./use-cases/ejercicio-paciente.use-case";
 
 // Zod
 export * from "./zods/categoria.zod";

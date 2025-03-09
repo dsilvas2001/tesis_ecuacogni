@@ -23,3 +23,12 @@ export class SignosVitalesEntity {
     public updatedAt?: Date
   ) {}
 }
+
+export class CountResultSignosV {
+  constructor(
+    public count_pacientes_hoy: number,
+    public count_signos_vitales_hoy?: number,
+    public count_emergencia_hoy?: number,
+    public count_sin_registrar?: number
+  ) {}
+}

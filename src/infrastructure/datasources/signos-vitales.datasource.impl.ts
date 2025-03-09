@@ -6,6 +6,7 @@ import {
   UsuariosModel,
 } from "../../data/mongodb/models";
 import {
+  CountResultSignosV,
   OpenAIDto,
   SignosVitalesDatasource,
   SignosVitalesDto,
@@ -112,14 +113,6 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
           id_paciente: signosVitalesDto.id_paciente,
           deletedAt: null,
         });
-
-      if (!referenciaSignosVitales) {
-        throw CustomError.badRequest(
-          "No se encontraron referencias de signos vitales para el paciente"
-        );
-      }
-
-      this.validarLimitesReferencia(signosVitalesDto, referenciaSignosVitales);
 
       // Buscar el registro de signos vitales del paciente en la fecha proporcionada
       const signosVitales = await SignosVitalesModel.findOne({
@@ -260,8 +253,8 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
   - Compara los valores actuales de los signos vitales con los límites de referencia proporcionados.  
   - Si algún valor está fuera de los límites, indica claramente cuál es el problema y su posible impacto en la salud del paciente.  
   - Proporciona una evaluación médica detallada, incluyendo predicciones, estado clínico, explicación, alertas, recomendaciones y un plan de acción.  
-  - En la sección de **tendencias**, analiza cómo los valores actuales se comparan con los límites de referencia. Indica si los valores están dentro de los rangos normales, ligeramente alterados o significativamente fuera de los límites.  
-
+  - En la sección de **tendencias**, analiza cómo los valores actuales se comparan con los límites de referencia. **Menciona explícitamente los límites de referencia** y explica si los valores están dentro de los rangos normales, ligeramente alterados o significativamente fuera de los límites.  
+  - La salida debe estar estructurada en JSON.  
 `;
 
       // Llamar a la IA para generar el análisis
@@ -287,12 +280,9 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
     statusSV: "emergencia" | "estable" | "pendiente" | "todos"
   ): Promise<SignosVitalesEntity[]> {
     try {
-      // Determinar la fecha a buscar
       const fechaBusqueda = fechaSeleccionada
         ? new Date(fechaSeleccionada)
         : new Date();
-
-      // Establecer los límites de la fecha (inicio y fin del día)
       const fechaInicio = new Date(
         fechaBusqueda.getFullYear(),
         fechaBusqueda.getMonth(),
@@ -301,18 +291,11 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
       const fechaFin = new Date(fechaInicio);
       fechaFin.setHours(23, 59, 59, 999);
 
-      // Construir el filtro de búsqueda para signos vitales
       const filtro: any = {
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
         deletedAt: null,
       };
 
-      // Aplicar filtro por statusSV si se proporciona y no es "todos"
-      if (statusSV && statusSV !== "todos") {
-        filtro["analisis_ia.statusSV"] = statusSV;
-      }
-
-      // Buscar signos vitales según los filtros
       const signosV = await SignosVitalesModel.find(filtro)
         .populate({
           path: "id_paciente",
@@ -326,12 +309,10 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
         })
         .exec();
 
-      // Obtener pacientes con referencias de signos vitales
       const pacientesConReferencias = await ReferenciaSignosVitalesModel.find({
         deletedAt: null,
       }).distinct("id_paciente");
 
-      // Obtener todos los pacientes con referencia en signos vitales
       const todosLosPacientes = await PacientesModel.find({
         _id: { $in: pacientesConReferencias },
         deletedAt: null,
@@ -343,62 +324,54 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
         })
         .exec();
 
-      // Mapear los resultados
       const resultados = todosLosPacientes.map((paciente) => {
-        const signosHoy = signosV.find(
-          (sv) => sv.id_paciente._id.toString() === paciente._id.toString()
-        );
+        const signosHoy = signosV.find((sv) => {
+          return sv.id_paciente._id.toString() === paciente._id.toString();
+        });
 
-        let status: "emergencia" | "estable" | "pendiente";
+        let status;
         let descripcion: string;
 
         if (signosHoy) {
-          const { analisis_ia } = signosHoy;
-
-          if (analisis_ia!.statusSV === "emergencia") {
-            status = "emergencia";
-            descripcion =
-              "Signos vitales fuera de rango, evitar hacer ejercicio";
-          } else if (analisis_ia!.statusSV === "estable") {
-            status = "estable";
-            descripcion = "Signos vitales normales, puede hacer ejercicio";
-          } else {
-            status = "pendiente";
-            descripcion = "Necesita revisión de signos vitales";
-          }
+          status = signosHoy.analisis_ia!.statusSV;
+          descripcion =
+            status === "emergencia"
+              ? "Signos vitales fuera de rango, evitar hacer ejercicio"
+              : status === "estable"
+              ? "Signos vitales normales, puede hacer ejercicio"
+              : "Necesita revisión de signos vitales";
         } else {
           status = "pendiente";
-          descripcion = "Necesita revisión de signos vitales";
+          descripcion = "No se encontraron signos vitales para hoy";
         }
-
-        const now = new Date();
-        const fechaHora = signosHoy
-          ? {
-              fecha: signosHoy.createdAt.toLocaleDateString(),
-              hora: signosHoy.createdAt.toLocaleTimeString(),
-            }
-          : {
-              fecha: now.toLocaleDateString(),
-              hora: now.toLocaleTimeString(),
-            };
 
         return {
           id_paciente: paciente._id.toString(),
           nombre: (paciente.id_usuario as any).nombre,
           apellido: (paciente.id_usuario as any).apellido,
           edad: paciente.edad,
-          date: fechaHora,
+          date: signosHoy
+            ? {
+                fecha: signosHoy.createdAt.toLocaleDateString(),
+                hora: signosHoy.createdAt.toLocaleTimeString(),
+              }
+            : {
+                fecha: fechaInicio.toLocaleDateString(),
+                hora: new Date().toLocaleTimeString(),
+              },
           descripcion,
           status,
         };
       });
 
-      // Filtrar resultados por statusSV si es necesario
       if (statusSV && statusSV !== "todos") {
-        return resultados.filter((resultado) => resultado.status === statusSV);
+        const filtrados = resultados.filter(
+          (resultado) => resultado.status === statusSV
+        );
+        console.log("Filtrados por estado:", filtrados);
+        return filtrados;
       }
 
-      // Retornar todos los resultados si no se especifica un statusSV o es "todos"
       return resultados;
     } catch (error) {
       console.error("Error al buscar los signos vitales:", error);
@@ -495,7 +468,125 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
     }
   }
 
-  //
+  // DELETE
+
+  async delete(id_paciente: string, fecha: string): Promise<string> {
+    try {
+      // Convertir la fecha proporcionada a un objeto Date
+      const fechaSeleccionada = new Date(fecha);
+
+      const finDelDia = new Date(fechaSeleccionada);
+      finDelDia.setHours(23, 59, 59, 999); // Establece la hora a 23:59:59.999
+
+      const result = await SignosVitalesModel.findOneAndUpdate(
+        {
+          id_paciente: id_paciente,
+          createdAt: { $gte: fechaSeleccionada, $lt: finDelDia },
+          deletedAt: null,
+        },
+        { deletedAt: new Date() },
+        { new: true }
+      );
+
+      if (!result) {
+        throw CustomError.badRequest(
+          "No se encontro los signos vitales a eliminar"
+        );
+      }
+
+      return "Signos vitales eliminados correctamente";
+    } catch (error) {
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw CustomError.internalServer();
+    }
+  }
+
+  //COUNT
+
+  async countAll(fechaString: string): Promise<CountResultSignosV> {
+    try {
+      // Convertir la fecha string a un objeto Date
+      const fechaBusqueda = new Date(fechaString);
+
+      // Definir el inicio del día
+      const fechaInicio = new Date(
+        fechaBusqueda.getFullYear(),
+        fechaBusqueda.getMonth(),
+        fechaBusqueda.getDate(),
+        0,
+        0,
+        0,
+        0
+      );
+
+      // Definir el final del día
+      const fechaFin = new Date(
+        fechaBusqueda.getFullYear(),
+        fechaBusqueda.getMonth(),
+        fechaBusqueda.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
+
+      // 1. Pacientes Agregados (total)
+      const count_pacientes_hoy = await PacientesModel.countDocuments({
+        deletedAt: null,
+      });
+
+      // 2. Signos Vitales (en la fecha específica)
+      const count_signos_vitales_hoy = await SignosVitalesModel.countDocuments({
+        createdAt: { $gte: fechaInicio, $lte: fechaFin },
+        deletedAt: null,
+      });
+
+      // 3. Emergencia (en la fecha específica) (statusSV = "emergencia")
+      const count_emergencia_hoy = await SignosVitalesModel.countDocuments({
+        createdAt: { $gte: fechaInicio, $lte: fechaFin }, // <-- Cambio aquí
+        "analisis_ia.statusSV": "emergencia",
+        deletedAt: null,
+      });
+
+      // 4. Pacientes con referencia pero sin registros de signos vitales en la fecha específica
+      const pacientesConReferencia =
+        await ReferenciaSignosVitalesModel.distinct("id_paciente", {
+          deletedAt: null,
+        });
+
+      const pacientesConSignosVitalesHoy = await SignosVitalesModel.distinct(
+        "id_paciente",
+        {
+          createdAt: { $gte: fechaInicio, $lte: fechaFin }, // <-- Cambio aquí
+          deletedAt: null,
+        }
+      );
+
+      const count_sin_registrar = await PacientesModel.countDocuments({
+        _id: {
+          $in: pacientesConReferencia,
+          $nin: pacientesConSignosVitalesHoy,
+        },
+        deletedAt: null,
+      });
+
+      // Combinar los resultados en un objeto
+      const combinedObject = {
+        count_pacientes_hoy,
+        count_signos_vitales_hoy,
+        count_emergencia_hoy,
+        count_sin_registrar,
+      };
+
+      return combinedObject;
+    } catch (error) {
+      console.error("Error al obtener el resumen de referencias de SV:", error);
+      throw error;
+    }
+  }
+
   private validarLimitesReferencia(
     signosVitalesDto: SignosVitalesDto,
     referenciaSignosVitales: any

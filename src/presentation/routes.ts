@@ -6,6 +6,7 @@ import { UsuarioRoutes } from "./usuario/usuario.routes";
 import { PacienteRoutes } from "./paciente/paciente.routes";
 import { ReferenciaSignosVRoutes } from "./referencia-signosV/referencias-signosv.routes";
 import { SignosVitalesRoutes } from "./signos-vitales/signos-vitales.routes";
+import { EjercicioPacienteRoutes } from "./ejercicio-paciente/ejercicio-paciente.routes";
 
 export class AppRoutes {
   static get routes(): Router {
@@ -17,6 +18,7 @@ export class AppRoutes {
     router.use("/paciente", PacienteRoutes.routes);
     router.use("/referencia", ReferenciaSignosVRoutes.routes);
     router.use("/signosV", SignosVitalesRoutes.routes);
+    router.use("/ejercicioP", EjercicioPacienteRoutes.routes);
     //
 
     return router;

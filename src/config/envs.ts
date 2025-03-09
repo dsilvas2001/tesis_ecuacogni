@@ -12,6 +12,7 @@ export const envs = {
   MONGO_PASS: env.get("MONGO_PASS").required().asString(),
   JWT_SEED: env.get("JWT_SEED").required().asString(),
   OPENAI_API_KEY: env.get("OPENAI_API_KEY").required().asString(),
+
   GOOGLE_SEARCH_ID: env.get("GOOGLE_SEARCH_ID").required().asString(),
   GOOGLE_SEARCH_KEY: env.get("GOOGLE_SEARCH_KEY").required().asString(),
 };

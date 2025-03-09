@@ -15,7 +15,7 @@ const pacienteEjercicioschema = new Schema(
     estado: {
       type: String,
       required: [true, "estado del ejercicio es requerido"],
-      enum: ["Pendiente", "Completado"],
+      enum: ["incompleto", "completo"],
     },
     deletedAt: {
       type: Date,

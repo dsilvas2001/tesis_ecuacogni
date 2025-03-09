@@ -21,6 +21,9 @@ export class SignosVitalesRoutes {
     router.get("/pacienteSV/:id/:fecha", controller.findByPacienteAndFecha);
     router.post("/register", controller.registerSignosVitales);
     router.put("/update/:id/:fecha", controller.updateSignosV);
+    router.put("/delete/:id/:fecha", controller.deleteSignosV);
+
+    router.get("/count/:status/:fecha", controller.countgetSignosV);
 
     return router;
   }

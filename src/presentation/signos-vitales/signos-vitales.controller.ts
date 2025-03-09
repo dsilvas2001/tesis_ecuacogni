@@ -61,6 +61,19 @@ export class SignosVitalesController {
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };
+  deleteSignosV = async (req: Request, res: Response) => {
+    new SignosVitalesUseCase(this.signosVitalesRepository)
+      .executeDelete(req.params.id, req.params.fecha)
+      .then((data) => res.json(data))
+      .catch((error) => this.handleError(error, res));
+  };
+  countgetSignosV = async (req: Request, res: Response) => {
+    new SignosVitalesUseCase(this.signosVitalesRepository)
+
+      .executeCountAll(req.params.fecha)
+      .then((data) => res.json(data))
+      .catch((error) => this.handleError(error, res));
+  };
 
   getAllSignosV = async (req: Request, res: Response) => {
     new SignosVitalesUseCase(this.signosVitalesRepository)

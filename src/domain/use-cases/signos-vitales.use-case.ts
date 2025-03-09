@@ -33,6 +33,14 @@ export class SignosVitalesUseCase {
     );
   }
 
+  async executeCountAll(fechaString: string) {
+    return await this.signosVitalesRepository.countAll(fechaString);
+  }
+
+  async executeDelete(id_paciente: string, fecha: string) {
+    return await this.signosVitalesRepository.delete(id_paciente, fecha);
+  }
+
   async executeFindByPacienteAndFecha(id_paciente: string, fecha: string) {
     return await this.signosVitalesRepository.findByPacienteAndFecha(
       id_paciente,
