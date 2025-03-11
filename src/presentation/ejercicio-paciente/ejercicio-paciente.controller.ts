@@ -27,4 +27,10 @@ export class EjercicioPacienteController {
       .then((data) => res.status(200).json(data))
       .catch((error) => this.handleError(error, res));
   };
+  getCountEjercicio = (req: Request, res: Response) => {
+    new EjercicioPacienteUseCase(this.ejercicioPacienteRepository)
+      .executeCount()
+      .then((data) => res.status(200).json(data))
+      .catch((error) => this.handleError(error, res));
+  };
 }

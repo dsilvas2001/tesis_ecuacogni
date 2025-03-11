@@ -7,4 +7,6 @@ export abstract class UsuarioRepository {
     email: string,
     password: string
   ): Promise<UserEntity>;
+
+  abstract countAllHOME(): Promise<any>;
 }

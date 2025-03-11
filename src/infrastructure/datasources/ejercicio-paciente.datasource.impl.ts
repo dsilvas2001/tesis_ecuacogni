@@ -137,5 +137,58 @@ export class EjercicioPacienteDatasourceImpl
     }
   }
 
-  async countAll(): Promise<any> {}
+  async countAll(): Promise<any> {
+    try {
+      const fechaBusqueda = new Date();
+      const fechaInicio = new Date(
+        fechaBusqueda.getFullYear(),
+        fechaBusqueda.getMonth(),
+        fechaBusqueda.getDate()
+      );
+      const fechaFin = new Date(fechaInicio);
+      fechaFin.setHours(23, 59, 59, 999);
+
+      // Filtro para buscar signos vitales en la fecha seleccionada
+      const filtroSignosVitales: any = {
+        createdAt: { $gte: fechaInicio, $lte: fechaFin },
+        deletedAt: null,
+        "analisis_ia.statusSV": "estable", // Solo pacientes con signos vitales estables
+      };
+
+      // Buscar los signos vitales en la fecha seleccionada
+      const signosVitales = await SignosVitalesModel.find(filtroSignosVitales)
+        .populate({ path: "id_paciente", model: PacientesModel })
+        .exec();
+
+      // Obtener los IDs de los pacientes con signos vitales estables
+      const pacientesEstables = signosVitales.map(
+        (signo) => signo.id_paciente._id
+      );
+
+      // Filtro para buscar ejercicios asignados hoy
+      const filtroEjerciciosAsignados: any = {
+        createdAt: { $gte: fechaInicio, $lte: fechaFin },
+        id_paciente: { $in: pacientesEstables }, // Solo pacientes con signos vitales estables
+        deletedAt: null,
+      };
+
+      // Contar ejercicios asignados hoy
+      const ejerciciosAsignados = await PacienteEjerciciosModel.countDocuments(
+        filtroEjerciciosAsignados
+      );
+
+      // Contar pacientes estables sin ejercicios asignados hoy (pendientes)
+      const pacientesPendientes =
+        pacientesEstables.length - ejerciciosAsignados;
+
+      return {
+        pacientesEstables: pacientesEstables.length, // Total de pacientes estables
+        ejerciciosAsignados, // Ejercicios asignados hoy
+        pacientesPendientes, // Pacientes estables sin ejercicios asignados hoy
+      };
+    } catch (error) {
+      console.error("Error al contar los ejercicios:", error);
+      throw error;
+    }
+  }
 }

@@ -14,4 +14,7 @@ export class EjercicioPacienteUseCase {
       statusSV
     );
   }
+  async executeCount() {
+    return await this.ejercicioPacienteRepository.countAll();
+  }
 }

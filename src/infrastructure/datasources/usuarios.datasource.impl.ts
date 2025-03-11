@@ -1,6 +1,9 @@
 import {
   MedicosModel,
+  PacienteEjerciciosModel,
+  PacientesModel,
   RolesModel,
+  SignosVitalesModel,
   UsuariosModel,
 } from "../../data/mongodb/models";
 import { UserDto, UserEntity, UsuarioDatasource } from "../../domain";
@@ -101,6 +104,55 @@ export class UsuarioDatasourceImpl implements UsuarioDatasource {
       } else {
         throw CustomError.internalServer();
       }
+    }
+  }
+
+  async countAllHOME(): Promise<any> {
+    try {
+      const fechaBusqueda = new Date();
+      const fechaInicio = new Date(
+        fechaBusqueda.getFullYear(),
+        fechaBusqueda.getMonth(),
+        fechaBusqueda.getDate()
+      );
+      const fechaFin = new Date(fechaInicio);
+      fechaFin.setHours(23, 59, 59, 999);
+
+      // Contar pacientes agregados (total en la base de datos)
+      const totalPacientes = await PacientesModel.countDocuments({
+        deletedAt: null,
+      });
+
+      // Filtro para contar signos vitales registrados hoy
+      const filtroSignosVitalesHoy: any = {
+        createdAt: { $gte: fechaInicio, $lte: fechaFin },
+        deletedAt: null,
+      };
+
+      // Contar signos vitales registrados hoy
+      const signosVitalesHoy = await SignosVitalesModel.countDocuments(
+        filtroSignosVitalesHoy
+      );
+
+      // Filtro para contar ejercicios generados hoy
+      const filtroEjerciciosHoy: any = {
+        createdAt: { $gte: fechaInicio, $lte: fechaFin },
+        deletedAt: null,
+      };
+
+      // Contar ejercicios generados hoy
+      const ejerciciosHoy = await PacienteEjerciciosModel.countDocuments(
+        filtroEjerciciosHoy
+      );
+
+      return {
+        totalPacientes, // Total de pacientes en la base de datos
+        signosVitalesHoy, // Signos vitales registrados hoy
+        ejerciciosHoy, // Ejercicios generados hoy
+      };
+    } catch (error) {
+      console.error("Error al contar los registros:", error);
+      throw error;
     }
   }
 }

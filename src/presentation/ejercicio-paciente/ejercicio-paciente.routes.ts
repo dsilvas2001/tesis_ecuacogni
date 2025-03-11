@@ -16,6 +16,7 @@ export class EjercicioPacienteRoutes {
     );
 
     router.get("/:fecha/:status", controller.getEjercicio);
+    router.get("/count", controller.getCountEjercicio);
 
     return router;
   }

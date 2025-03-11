@@ -14,6 +14,7 @@ export class UsuarioRoutes {
 
     router.post("/register", controller.registerUser);
     router.post("/auth", controller.findByCredentials);
+    router.get("/countHome", controller.getCountAllHOME);
 
     // router.post("/register", controller.registerUser);
 

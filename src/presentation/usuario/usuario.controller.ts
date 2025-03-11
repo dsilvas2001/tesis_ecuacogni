@@ -59,4 +59,11 @@ export class UsuarioController {
       this.handleError(error, res);
     }
   };
+
+  getCountAllHOME = async (req: Request, res: Response): Promise<void> => {
+    new UsuarioUseCase(this.userRepository)
+      .countAllHOME()
+      .then((data) => res.status(200).json(data))
+      .catch((error) => this.handleError(error, res));
+  };
 }

@@ -21,4 +21,7 @@ export class UsuarioUseCase {
 
     return user;
   }
+  async countAllHOME(): Promise<any> {
+    return await this.usuarioRepository.countAllHOME();
+  }
 }
