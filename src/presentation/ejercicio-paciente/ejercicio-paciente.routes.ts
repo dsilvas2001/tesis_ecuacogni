@@ -17,6 +17,7 @@ export class EjercicioPacienteRoutes {
 
     router.get("/:fecha/:status", controller.getEjercicio);
     router.get("/count", controller.getCountEjercicio);
+    router.post("/select", controller.getSelectCategoria);
 
     return router;
   }

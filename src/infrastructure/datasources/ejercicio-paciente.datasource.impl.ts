@@ -5,11 +5,20 @@ import {
   SignosVitalesModel,
   UsuariosModel,
 } from "../../data/mongodb/models";
-import { EjercicioPacienteDataSource } from "../../domain";
+import {
+  EjercicioPacienteDataSource,
+  OpenAIDto,
+  SelectCategoriaZod,
+  SignosVitalesDto,
+} from "../../domain";
+import { CustomError } from "../errors/custom.error";
+import { OpenAIDatasourceImpl } from "./openai.datasource.impl";
 
 export class EjercicioPacienteDatasourceImpl
   implements EjercicioPacienteDataSource
 {
+  private openaiDatasource = new OpenAIDatasourceImpl();
+
   constructor() {}
 
   async findAll(
@@ -189,6 +198,53 @@ export class EjercicioPacienteDatasourceImpl
     } catch (error) {
       console.error("Error al contar los ejercicios:", error);
       throw error;
+    }
+  }
+
+  async selectCategoria(signosVitalesDto: SignosVitalesDto): Promise<any> {
+    try {
+      // Construir el prompt con los datos del DTO
+      const prompt = `
+      Eres un asistente médico de IA especializado en el monitoreo y análisis de signos vitales de los pacientes. Debes proporcionar una evaluación médica detallada en **español**, asegurando **coherencia** en la asignación de categorías.  
+      
+      ### **Datos actuales de signos vitales:**  
+      - **Presión arterial:** ${signosVitalesDto.presion_arterial!.sistolica}/${
+        signosVitalesDto.presion_arterial!.diastolica
+      } mmHg  
+      - **Frecuencia cardíaca:** ${signosVitalesDto.frecuencia_cardiaca} bpm  
+      - **Frecuencia respiratoria:** ${
+        signosVitalesDto.frecuencia_respiratoria
+      } respiraciones/min  
+      - **Temperatura:** ${signosVitalesDto.temperatura} °C  
+      
+      ### **Instrucciones:**  
+      1. **Solo puedes seleccionar las siguientes categorías** y no debes inventar nuevas:
+         - **Memoria**
+         - **Atención**
+         - **Lenguaje**
+         - **Razonamiento**  
+      2. **Siempre** selecciona la misma categoría para signos vitales similares.  
+      3. Selecciona **una o mas categorías** de estimulación cognitiva según la siguiente guía:
+         - **Memoria** → Presión baja o hipoxia afectan la retención de información.
+         - **Atención** → Fiebre o taquicardia afectan la concentración.
+         - **Lenguaje** → Signos estables o leve alteración cognitiva.
+         - **Razonamiento** → Estrés cardiovascular o alta carga mental.  
+      `;
+
+      // Llamar a la IA para generar el análisis
+      const openAIDto = OpenAIDto.create({ prompt })[1];
+      const openAIResponse = await this.openaiDatasource.generateText(
+        openAIDto!,
+        SelectCategoriaZod
+      );
+
+      // Devolver la respuesta de la IA
+      return openAIResponse;
+    } catch (error) {
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw CustomError.internalServer();
     }
   }
 }

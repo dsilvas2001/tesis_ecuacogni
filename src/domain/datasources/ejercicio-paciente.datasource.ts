@@ -1,3 +1,5 @@
+import { SignosVitalesDto } from "../dtos/signos-vitales.dto";
+
 export abstract class EjercicioPacienteDataSource {
   abstract findAll(
     fechaSeleccionada: string,
@@ -5,4 +7,6 @@ export abstract class EjercicioPacienteDataSource {
   ): Promise<any[]>;
 
   abstract countAll(): Promise<any>;
+
+  abstract selectCategoria(signosVitalesDto: SignosVitalesDto): Promise<any>;
 }

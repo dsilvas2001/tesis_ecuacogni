@@ -1,3 +1,4 @@
+import { SignosVitalesDto } from "../dtos/signos-vitales.dto";
 import { EjercicioPacienteRepository } from "../repositories/ejercicio-paciente.repository";
 
 export class EjercicioPacienteUseCase {
@@ -16,5 +17,10 @@ export class EjercicioPacienteUseCase {
   }
   async executeCount() {
     return await this.ejercicioPacienteRepository.countAll();
+  }
+  async executeSelectCaregoria(signosVitalesDto: SignosVitalesDto) {
+    return await this.ejercicioPacienteRepository.selectCategoria(
+      signosVitalesDto
+    );
   }
 }

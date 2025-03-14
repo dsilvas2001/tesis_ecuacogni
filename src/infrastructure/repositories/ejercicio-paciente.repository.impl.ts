@@ -23,4 +23,8 @@ export class EjercicioPacienteRepositoryImpl
   async countAll(): Promise<any> {
     return this.ejercicioPacienteDatasource.countAll();
   }
+
+  async selectCategoria(signosVitalesDto: any): Promise<any> {
+    return this.ejercicioPacienteDatasource.selectCategoria(signosVitalesDto);
+  }
 }

@@ -57,3 +57,4 @@ export * from "./use-cases/ejercicio-paciente.use-case";
 export * from "./zods/categoria.zod";
 export * from "./zods/ejercicio.zod";
 export * from "./zods/signos-vitales.zod";
+export * from "./zods/select-categoria.zod";
