@@ -29,4 +29,12 @@ export class EjercicioGeneradoController {
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };
+
+  getRecomendaciones = async (req: Request, res: Response) => {
+    const { tendencia, porcentajeExito, tiempoTranscurrido } = req.body;
+    new EjercicioGeneradoUseCase(this.ejercicioGeneradoRepository)
+      .executeRecomendaciones(tendencia, porcentajeExito, tiempoTranscurrido)
+      .then((data) => res.json(data))
+      .catch((error) => this.handleError(error, res));
+  };
 }

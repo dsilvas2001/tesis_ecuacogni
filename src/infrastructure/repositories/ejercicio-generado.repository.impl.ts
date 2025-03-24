@@ -23,4 +23,15 @@ export class EjercicioGeneradoRepositoryImpl
       signosVitalesDto
     );
   }
+  async generateRecomendaciones(
+    tendencia: string,
+    porcentajeExito: number,
+    tiempoTranscurrido: number
+  ): Promise<any> {
+    return this.ejercicioGeneradoDatasource.generateRecomendaciones(
+      tendencia,
+      porcentajeExito,
+      tiempoTranscurrido
+    );
+  }
 }

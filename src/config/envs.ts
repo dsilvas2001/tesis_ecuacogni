@@ -15,4 +15,5 @@ export const envs = {
 
   GOOGLE_SEARCH_ID: env.get("GOOGLE_SEARCH_ID").required().asString(),
   GOOGLE_SEARCH_KEY: env.get("GOOGLE_SEARCH_KEY").required().asString(),
+  UNSPLASH_KEY: env.get("UNSPLASH_KEY").required().asString(),
 };

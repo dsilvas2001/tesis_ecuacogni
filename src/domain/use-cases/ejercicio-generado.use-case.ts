@@ -21,4 +21,18 @@ export class EjercicioGeneradoUseCase {
 
     return ejercicio;
   }
+
+  async executeRecomendaciones(
+    tendencia: string,
+    porcentajeExito: number,
+    tiempoTranscurrido: number
+  ): Promise<any> {
+    const recomendaciones =
+      await this.ejercicioGeneradoRepository.generateRecomendaciones(
+        tendencia,
+        porcentajeExito,
+        tiempoTranscurrido
+      );
+    return recomendaciones;
+  }
 }

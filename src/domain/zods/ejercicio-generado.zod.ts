@@ -22,3 +22,9 @@ export const EjercicioGeneradoZod = z.object({
   instrucciones: z.string(), // Instrucciones detalladas para resolver el ejercicio
   contenido: ContenidoEjercicioZod, // Contenido adicional (opcional)
 });
+
+export const RecomendacionesZod = z.object({
+  tendencia: z.string(), // Descripción de la tendencia de errores
+  recomendaciones: z.array(z.string()), // Lista de recomendaciones
+  fortalezas: z.array(z.string()), // Lista de fortalezas detectadas
+});

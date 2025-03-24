@@ -5,6 +5,7 @@ import {
   EjercicioGeneradoDatasource,
   EjercicioGeneradoZod,
   OpenAIDto,
+  RecomendacionesZod,
   SignosVitalesDto,
 } from "../../domain";
 import { OpenAIDatasourceImpl } from "./openai.datasource.impl";
@@ -26,28 +27,84 @@ export class EjercicioGeneradoDatasourceImpl
     signosVitalesDto: SignosVitalesDto
   ): Promise<any[]> {
     const prompt = `
-        Eres un asistente médico de IA especializado en el monitoreo y análisis de signos vitales de los pacientes. Debes generar una cadena de búsqueda en **español** para encontrar ejercicios de estimulación cognitiva basados en la categoría y los signos vitales proporcionados.  
-          
-        ### **Datos proporcionados:**  
-        - **Categoría:** ${categoria}  
-        - **Presión arterial:** ${
-          signosVitalesDto.presion_arterial!.sistolica
-        }/${signosVitalesDto.presion_arterial!.diastolica} mmHg  
-        - **Frecuencia cardíaca:** ${signosVitalesDto.frecuencia_cardiaca} bpm  
-        - **Frecuencia respiratoria:** ${
-          signosVitalesDto.frecuencia_respiratoria
-        } respiraciones/min  
-        - **Temperatura:** ${signosVitalesDto.temperatura} °C  
-          
-        ### **Instrucciones:**  
-        1. **Genera una cadena de búsqueda** clara y específica para encontrar ejercicios de estimulación cognitiva.  
-        2. La cadena debe incluir la categoría y los signos vitales más relevantes.  
-        3. Ejemplos de cadenas de búsqueda:  
-           - "Ejercicios de memoria para pacientes con presión arterial baja y frecuencia cardíaca elevada".  
-           - "Ejercicios de atención para pacientes con fiebre y taquicardia".  
-           - "Ejercicios de lenguaje para pacientes con signos vitales estables".  
-           - "Ejercicios de razonamiento para pacientes con estrés cardiovascular".  
-      `;
+    Eres un asistente especializado en generar ejercicios de estimulación cognitiva para adultos mayores (80 años en adelante). Tu objetivo es generar un ejercicio adaptado a la categoría "\${categoria}", asegurando que sea claro, accesible y adecuado para esta edad.
+    
+    ## 📌 Instrucciones Generales
+    - El ejercicio debe ser sencillo, comprensible y utilizar un lenguaje claro.
+    - Debe estar diseñado específicamente para estimular la **\${categoria}**.
+    - La presentación debe ser clara, con estructura definida y visualmente atractiva.
+    - Se deben incluir **opciones de respuesta (mínimo 4)**, incluso en ejercicios de completar.
+    - La respuesta correcta debe coincidir con una de las opciones, y las opciones deben ser variadas y lógicas según el contexto.
+    
+    ## 🧠 Categorías y Formatos Recomendados
+    
+    1. **Memoria** 🧠  
+       - Ejercicios que inviten a recordar datos o pequeñas anécdotas.  
+       - Ejemplos:  
+         - Recordar fragmentos de historias breves (por ejemplo, una cápsula histórica sobre Ecuador, como "La Independencia de Ecuador").  
+         - Ejercicios de recordar secuencias o listas de palabras.
+       - **Ejemplo:**  
+         *"La siguiente historia narra hechos importantes de Ecuador. Lee el siguiente párrafo y luego selecciona cuál de las siguientes afirmaciones es correcta:"*
+    
+    2. **Lenguaje** 🗣️  
+       - Ejercicios enfocados en la comprensión y estructuración del lenguaje.  
+       - Ejemplos:  
+         - Completar oraciones, identificar errores o formar palabras.  
+         - Ejercicio tipo relato: *"Juan lleva a su perro al parque"*, donde se puede pedir que el adulto complete la oración o responda una pregunta sobre el relato.
+       - **Ejemplo:**  
+         *"Lee la siguiente oración: 'Juan lleva a su ___ al parque'. Selecciona la opción que complete correctamente la frase."*
+    
+    3. **Atencion** 🔢  
+       - Ejercicios que requieran identificar patrones o reconocer palabras faltantes en un contexto.  
+       - Ejemplos:  
+         - Ejercicios de atención en el que se debe seleccionar la opción que completa correctamente una secuencia o frase.  
+         - Problemas matemáticos sencillos (como '2+2') o identificar diferencias en imágenes.
+       - **Ejemplo:**  
+         *"Observa la siguiente secuencia: 2, 4, __, 8. ¿Cuál es el número que falta?"*
+    
+    ## 🔹 Estructura del Ejercicio (Formato JSON)
+    Debe seguir el siguiente formato, y **SIEMPRE incluir opciones de respuesta (mínimo 4)**:
+    
+    [
+      {
+        "titulo": "Ejemplo: Encuentra la Fruta Correcta",
+        "descripcion": "Ejercicio de memoria en el que debes recordar una fruta mencionada previamente.",
+        "tipo": "completar",
+        "dificultad": "baja",
+        "instrucciones": "Selecciona la fruta correcta para completar la frase.",
+        "contenido": {
+          "tipo_contenido": "texto",
+          "contenido": "La fruta que es roja y dulce es:"
+        },
+        "opciones": [
+          { "texto": "Manzana", "imagen": "" },
+          { "texto": "Plátano", "imagen": "" },
+          { "texto": "Fresa", "imagen": "" },
+          { "texto": "Naranja", "imagen": "" }
+        ],
+        "respuesta_correcta": ["Fresa"]
+      }
+    ]
+    
+    ⚠ **Reglas Importantes:**
+    - **Todos los ejercicios deben incluir opciones de respuesta (mínimo 4).**
+    - **Incluso en ejercicios de completar deben presentarse opciones.**
+    - **La respuesta correcta debe coincidir con una de las opciones.**
+    - **Las opciones deben ser variadas y coherentes con el contexto.**
+    
+    📢 **Ejemplo de una pregunta para la categoría "Razonamiento":**  
+    Pregunta: ¿Cuánto es 2 + 2?  
+    Opciones: 1, 2, 3, 4.  
+    Respuesta correcta: 4.
+    
+    🔹 **Genera un ejercicio siguiendo estas reglas y adaptado a la categoría "\${categoria}".**
+    
+    **Notas adicionales según la categoría:**  
+    - Si **\${categoria}** es "Lenguaje", enfoca el ejercicio en comprender y completar relatos o identificar errores en oraciones.  
+    - Si es "Memoria", crea ejercicios basados en recordar pequeños fragmentos históricos o listas simples de palabras o datos relevantes (por ejemplo, hechos históricos de Ecuador).  
+    - Si es "Atención" o "Razonamiento", diseña ejercicios que involucren identificar patrones o completar secuencias, asegurando que sean intuitivos y directos para la población adulta mayor.
+    
+    `;
 
     // Llamar a la IA para generar la cadena de búsqueda
     const openAIDto = OpenAIDto.create({ prompt })[1];
@@ -74,8 +131,6 @@ export class EjercicioGeneradoDatasourceImpl
     return ejerciciosGenerados;
   }
 
-  // Método para generar el prompt dinámico
-
   //   async generarEjercicios(
   //     categoria: string,
   //     resultadosScraping: any,
@@ -85,190 +140,366 @@ export class EjercicioGeneradoDatasourceImpl
 
   //     for (let i = 0; i < numeroEjercicios; i++) {
   //       // Construir el prompt para ChatGPT
+
+  //       // Bloque condicional para agregar instrucciones específicas según la categoría.
+  //       const categorySpecificPrompt = (() => {
+  //         switch (categoria.toLowerCase()) {
+  //           case "lenguaje":
+  //             return `
+  //         Para ejercicios de Lenguaje:
+  //         - Usa relatos breves que describan situaciones cotidianas.
+  //         - El enunciado debe incluir dos partes: "Relato:" (una o dos oraciones) y "Pregunta:" (la interrogante derivada del relato).
+  //         - Ejemplo:
+  //           "Relato: Juan salió a caminar por el parque y se encontró con un viejo amigo.
+  //           Pregunta: ¿Con quién se encontró?"
+  //         - Todas las opciones de respuesta deben ser de una sola palabra.
+  //               `;
+  //           case "memoria":
+  //             return `
+  //         Para ejercicios de Memoria:
+  //         - Usa relatos breves que rememoren un suceso o anécdota sencilla, ya sea histórica o cotidiana.
+  //         - El enunciado debe dividirse en "Relato:" (máximo 1-2 oraciones) y "Pregunta:" (la interrogante enfocada en recordar un detalle).
+  //         - Ejemplo:
+  //           "Relato: Ana preparó una sopa caliente y deliciosa para la cena.
+  //           Pregunta: ¿Qué preparó?"
+  //         - Las opciones deben ser de una sola palabra.
+  //               `;
+  //           case "atencion":
+  //           case "razonamiento":
+  //             return `
+  //         Para ejercicios de Atención y Razonamiento:
+  //         - Emplea secuencias, patrones o problemas sencillos que requieran identificar un elemento faltante o la lógica detrás de una serie.
+  //         - El enunciado debe incluir "Relato:" (por ejemplo, una secuencia) y "Pregunta:" (de forma directa).
+  //         - Ejemplo:
+  //           "Relato: 2, 4, __, 8.
+  //           Pregunta: ¿Cuál es el número que falta?"
+  //         - Las opciones (que pueden ser números o palabras) deben ser de una sola palabra.
+  //               `;
+  //           default:
+  //             return `
+  //         Utiliza un formato sencillo y directo, adaptado a adultos mayores.
+  //               `;
+  //         }
+  //       })();
+
   //       const prompt = `
-  //      Eres un asistente especializado en generar ejercicios de estimulación cognitiva.
-  // Genera un ejercicio de la categoría "${categoria}" que ayude a mejorar habilidades como la memoria, la atención, el lenguaje o el razonamiento.
+  //         Eres un asistente especializado en generar ejercicios de estimulación cognitiva para adultos mayores (80 años en adelante). Tu objetivo es crear ejercicios simples, atractivos y adaptados a la categoría "\${categoria}", utilizando un lenguaje claro, cotidiano y directo.
 
-  // El ejercicio debe ser del tipo "seleccionar" o "completar", donde el usuario debe elegir la opción correcta entre varias opciones proporcionadas o completar una palabra/frase.
+  //         ## 📌 Instrucciones Generales
+  //         - Cada ejercicio debe incluir un **Relato** y una **Pregunta**. El relato debe ser breve (máximo 1-2 oraciones) y la pregunta debe formularse de forma explícita.
+  //         - Todas las opciones de respuesta deben ser de **una sola palabra**.
+  //         - La respuesta correcta debe coincidir exactamente con una de las opciones.
+  //         - El contenido y las opciones deben ser coherentes, variadas y adecuados para adultos mayores.
 
-  // **Estructura del ejercicio:**
-  // 1. **Título:** Un título descriptivo del ejercicio.
-  // 2. **Descripción:** Breve explicación del propósito del ejercicio.
-  // 3. **Instrucciones:** Claras y directas, indicando si se debe seleccionar la opción correcta o completar la palabra/frase.
-  // 4. **Contenido:**
-  //    - Si el ejercicio no requiere imágenes, proporciona solo el texto necesario.
-  //    - Si el ejercicio requiere imágenes, busca las imágenes en Google Fotos y asigna **una única URL válida** a cada opción correspondiente en un array.
-  //    - Ejemplo correcto:
-  //    json
-  //      {
-  //        "opciones": [
-  //          { "texto": "Banano", "imagen": "https://www.google.com/url?sa=i&url=https%3A%2F%2Fcultivodeplatano.com%2F2011%2F09%2F22%2Fvariedades-de-banano%2F&psig=AOvVaw3twLqIuHbut0F7psh5SbHs&ust=1742348619473000&source=images&cd=vfe&opi=89978449&ved=0CBQQjRxqFwoTCKDQz8vAkowDFQAAAAAdAAAAABAE" },
-  //          { "texto": "Pera", "imagen": "https://www.google.com/url?sa=i&url=https%3A%2F%2Flibbys.es%2Fblog%2Fhabitos-saludables%2Fla-pera-refrescante-y-saludable%2F4410&psig=AOvVaw2NZn6O8cX6iFwqhVNy2R5_&ust=1742348592890000&source=images&cd=vfe&opi=89978449&ved=0CBQQjRxqFwoTCJjB_bnAkowDFQAAAAAdAAAAABAE" },
-  //          { "texto": "Manzana", "imagen": "https://www.google.com/imgres?q=manzana&imgurl=https%3A%2F%2Fwww.recetasnestle.com.ec%2Fsites%2Fdefault%2Ffiles%2Finline-images%2Ftipos-de-manzana-royal-gala.jpg&imgrefurl=https%3A%2F%2Fwww.recetasnestle.com.ec%2Fescuela-sabor%2Ftips-recetas%2Fmanzana-verde-y-roja&docid=pqm3SaLBGa6rjM&tbnid=8mRthNnHI7JklM&vet=12ahUKEwj-vIecwJKMAxWXSTABHXWBBFcQM3oECBwQAA..i&w=380&h=260&hcb=2&ved=2ahUKEwj-vIecwJKMAxWXSTABHXWBBFcQM3oECBwQAA" },
-  //          { "texto": "Naranja", "imagen": "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww3.gobiernodecanarias.org%2Fmedusa%2Fmediateca%2Fecoescuela%2F%3Fattachment_id%3D1951&psig=AOvVaw3RoGXX2xwm3LnRs8GyWf24&ust=1742348567813000&source=images&cd=vfe&opi=89978449&ved=0CBQQjRxqFwoTCOjqwq7AkowDFQAAAAAdAAAAABAE" }
-  //        ]
-  //      }
+  //         ${categorySpecificPrompt}
 
-  //      Cada opción debe tener una única imagen relacionada sin repetir ni dejar vacíos.
-  // 5. **Opciones de respuesta:**
-  //    - Para "seleccionar": Al menos 4 opciones con una única respuesta correcta.
-  //    - Para "completar": Una sola palabra o frase correcta.
-  // 6. **Respuesta correcta:** Debe estar claramente definida y ser única.
+  //         ## 🔹 Estructura del Ejercicio (Formato JSON)
+  //         El ejercicio debe seguir el siguiente formato:
 
-  // **Ejemplos de ejercicios generados:**
-  // - Memoria: "Escucha la lista de compras y selecciona los elementos que estaban en la lista."
-  // - Atención: "Mira la imagen y selecciona el objeto que no pertenece al grupo."
-  // - Lenguaje: "Completa la siguiente frase: El sol sale por el __________."
-  // - Razonamiento: "Selecciona el número que completa la secuencia: 2, 4, 6, __, 10."
+  //         [
+  //           {
+  //             "titulo": "Ejercicio de \${categoria}: Relato y Pregunta",
+  //             "descripcion": "Ejercicio en el que debes leer un breve relato y responder la pregunta formulada, seleccionando una sola palabra.",
+  //             "tipo": "completar",
+  //             "dificultad": "baja",
+  //             "instrucciones": "Lee el enunciado, que se divide en 'Relato:' y 'Pregunta:', y selecciona la respuesta correcta.",
+  //             "contenido": {
+  //               "tipo_contenido": "texto",
+  //               "contenido": "Relato: María fue al mercado y compró manzanas frescas. Pregunta: ¿Qué compró?"
+  //             },
+  //             "opciones": [
+  //               { "texto": "manzanas", "imagen": "https://images.unsplash.com/photo-1631342994537-34291c2ad1c6?crop=entropy&cs=srgb&fm=jpg&q=85" },
+  //               { "texto": "peras", "imagen": "https://images.unsplash.com/photo-1574207967175-7e1318661137?crop=entropy&cs=srgb&fm=jpg&q=85" },
+  //               { "texto": "naranjas", "imagen": "https://images.unsplash.com/photo-1505676707757-405c0fc83b56?crop=entropy&cs=srgb&fm=jpg&q=85" },
+  //               { "texto": "uvas", "imagen": "https://images.unsplash.com/photo-1509680415089-7f6c7d90d8a0?crop=entropy&cs=srgb&fm=jpg&q=85" }
+  //             ],
+  //             "respuesta_correcta": ["manzanas"]
+  //           }
+  //         ]
 
-  // **Reglas clave para la generación de ejercicios:**
-  // - Las instrucciones deben ser claras y específicas.
-  // - Si el ejercicio requiere imágenes, cada opción de respuesta debe tener una única URL de imagen obtenida de Google Fotos.
-  // - La respuesta correcta debe estar bien definida y ser única.
-  // - La estructura JSON debe ser válida y sin errores.
+  //         ⚠ **Reglas Importantes:**
+  //         - Cada ejercicio debe incluir al menos 4 opciones de respuesta, y cada opción debe ser **una sola palabra**.
+  //         - El enunciado debe contener un relato breve y una pregunta clara, separadas por etiquetas (por ejemplo, "Relato:" y "Pregunta:").
+  //         - La respuesta correcta debe coincidir exactamente con una de las opciones.
+  //         - Asegúrate de que el relato, la pregunta y las opciones sean coherentes, atractivos y adaptados a un nivel sencillo para adultos mayores.
 
-  // Genera la respuesta en formato JSON sin texto adicional.
+  //         📢 **Ejemplo Adicional para "Atención y Razonamiento":**
+  //         - Contenido: "Relato: 2, 4, __, 8. Pregunta: ¿Cuál es el número que falta?"
+  //         - Opciones: "6", "5", "7", "9"
+  //         - Respuesta correcta: "6".
 
-  //     `;
+  //         🔹 **Genera un ejercicio siguiendo estas reglas y adaptado a la categoría "\${categoria}".**
+  //         `;
 
   //       // Llamar a la API de ChatGPT para generar el ejercicio
   //       const openAIDto = OpenAIDto.create({ prompt })[1];
-  //       const openAIResponse = await this.openaiDatasource.generateTextImage(
+  //       const openAIResponse = await this.openaiDatasource.generateText(
   //         openAIDto!,
   //         EjercicioGeneradoZod
   //       );
 
   //       // Validar y estructurar la respuesta de ChatGPT
   //       const ejercicioValidado = EjercicioGeneradoZod.parse(openAIResponse);
+
+  //       // Buscar URLs de imágenes para todas las opciones
+  //       // Inicializamos un caché para almacenar imágenes por texto
+  //       const imageCache = new Map<string, string>();
+
+  //       const opcionesConImagenes = await Promise.all(
+  //         ejercicioValidado.contenido.opciones.map(
+  //           async (opcion: { texto: string; imagen?: string }) => {
+  //             const trimmedText = opcion.texto.trim();
+  //             if (!trimmedText) {
+  //               return {
+  //                 texto: opcion.texto,
+  //                 imagen: "URL_DE_IMAGEN_POR_DEFECTO",
+  //               };
+  //             }
+
+  //             // Si ya tenemos una imagen para este texto, la usamos
+  //             if (imageCache.has(trimmedText)) {
+  //               return {
+  //                 texto: opcion.texto,
+  //                 imagen: imageCache.get(trimmedText) as string,
+  //               };
+  //             }
+
+  //             try {
+  //               const imagenUrl =
+  //                 (await this.googleSearchDatasource.getFirstImageUrl(
+  //                   trimmedText
+  //                 )) || "URL_DE_IMAGEN_POR_DEFECTO";
+  //               imageCache.set(trimmedText, imagenUrl);
+  //               console.log(
+  //                 `Buscando imagen para: ${trimmedText} -> ${imagenUrl}`
+  //               );
+  //               return {
+  //                 texto: opcion.texto,
+  //                 imagen: imagenUrl,
+  //               };
+  //             } catch (error) {
+  //               console.error(
+  //                 `Error al buscar imagen para "${trimmedText}":`,
+  //                 error
+  //               );
+  //               return {
+  //                 texto: opcion.texto,
+  //                 imagen: "URL_DE_IMAGEN_POR_DEFECTO",
+  //               };
+  //             }
+  //           }
+  //         )
+  //       );
+
+  //       // Reemplazar las opciones con las opciones que incluyen URLs de imágenes
+  //       ejercicioValidado.contenido.opciones = opcionesConImagenes;
+
   //       ejercicios.push(ejercicioValidado);
   //     }
 
   //     return ejercicios;
-  //   }
+  // }
 
   async generarEjercicios(
     categoria: string,
     resultadosScraping: any,
     numeroEjercicios: number
   ): Promise<any[]> {
-    const ejercicios: any[] = [];
+    const ejerciciosPromises = Array.from({ length: numeroEjercicios }).map(
+      async (_, i) => {
+        // Bloque condicional para instrucciones específicas por categoría
+        const categorySpecificPrompt = (() => {
+          switch (categoria.toLowerCase()) {
+            case "lenguaje":
+              return `
+        Para ejercicios de Lenguaje:
+        - Usa relatos breves que describan situaciones cotidianas.
+        - El enunciado debe incluir dos partes: "Relato:" (una o dos oraciones) y "Pregunta:" (la interrogante derivada del relato).
+        - Ejemplo: 
+          "Relato: Juan salió a caminar por el parque y se encontró con un viejo amigo. 
+          Pregunta: ¿Con quién se encontró?"
+        - Todas las opciones de respuesta deben ser de una sola palabra.
+              `;
+            case "memoria":
+              return `
+        Para ejercicios de Memoria:
+        - Usa relatos breves que rememoren un suceso o anécdota sencilla, ya sea histórica o cotidiana.
+        - El enunciado debe dividirse en "Relato:" (máximo 1-2 oraciones) y "Pregunta:" (la interrogante enfocada en recordar un detalle).
+        - Ejemplo: 
+          "Relato: Ana preparó una sopa caliente y deliciosa para la cena. 
+          Pregunta: ¿Qué preparó?"
+        - Las opciones deben ser de una sola palabra.
+              `;
+            case "atencion":
+            case "razonamiento":
+              return `
+        Para ejercicios de Atención y Razonamiento:
+        - Emplea secuencias, patrones o problemas sencillos que requieran identificar un elemento faltante o la lógica detrás de una serie.
+        - El enunciado debe incluir "Relato:" (por ejemplo, una secuencia) y "Pregunta:" (de forma directa).
+        - Ejemplo: 
+          "Relato: 2, 4, __, 8. 
+          Pregunta: ¿Cuál es el número que falta?"
+        - Las opciones (que pueden ser números o palabras) deben ser de una sola palabra.
+              `;
+            default:
+              return `
+        Utiliza un formato sencillo y directo, adaptado a adultos mayores.
+              `;
+          }
+        })();
 
-    for (let i = 0; i < numeroEjercicios; i++) {
-      // Construir el prompt para ChatGPT
-      const prompt = `
-      Eres un asistente especializado en generar ejercicios de estimulación cognitiva para adultos mayores (80 años en adelante). Tu objetivo es generar un ejercicio adaptado a la categoría "${categoria}", asegurando que sea claro, accesible y adecuado para esta edad.
-      
-      ## 📌 **Instrucciones Generales**
-      - El ejercicio debe ser sencillo y comprensible, evitando términos complejos o instrucciones confusas.
-      - Debe estar diseñado específicamente para estimular la **${categoria}**.
-      - La presentación debe ser clara y estructurada.
-      - Se pueden utilizar distintos formatos según la categoría, como ejercicios de completar frases, preguntas de opción múltiple, ejercicios de asociación o pequeños relatos con preguntas.
-      
-      ## 🧠 **Categorías y Formatos Recomendados**
-      1. **Memoria** 🧠  
-         - Ejercicios de recordar listas cortas de palabras o imágenes.  
-         - Completar frases con palabras previamente mostradas.  
-         - Relatos breves seguidos de preguntas sobre el contenido.  
-      
-      2. **Lenguaje** 🗣️  
-         - Encontrar sinónimos o completar palabras faltantes en oraciones.  
-         - Asociar imágenes con palabras.  
-         - Formar palabras con letras dadas.  
-      
-      3. **Razonamiento** 🔢  
-         - Problemas matemáticos básicos como sumas o secuencias numéricas.  
-         - Identificación de patrones o relaciones lógicas entre elementos.  
-         - Preguntas de verdadero o falso sobre conceptos sencillos.  
-      
-      ## 🔹 **Estructura del Ejercicio (Formato JSON)**
-      Debe seguir este formato y SIEMPRE incluir opciones de respuesta (3):
-      
-      [
-        {
-          "titulo": "Ejemplo: Encuentra la Fruta Correcta",
-          "descripcion": "Ejercicio de memoria donde debes recordar una fruta mencionada previamente.",
-          "tipo": "completar",
-          "dificultad": "baja",
-          "instrucciones": "Selecciona la fruta correcta para completar la frase.",
-          "contenido": {
-            "tipo_contenido": "texto",
-            "contenido": "La fruta que es roja y dulce es:"
-          },
-          "opciones": [
-            { "texto": "Manzana", "imagen": "" },
-            { "texto": "Plátano", "imagen": "" },
-            { "texto": "Fresa", "imagen": "" },
-            { "texto": "Naranja", "imagen": "" }
-          ],
-          "respuesta_correcta": ["Fresa"]
-        }
-      ]
-      
-      ⚠ **Reglas Importantes:**
-      - **Todos los ejercicios deben incluir opciones de respuesta (mínimo 4).**
-      - **Incluso los ejercicios de completar deben tener opciones.**
-      - **La respuesta correcta debe coincidir con una de las opciones.**
-      - **Las opciones deben ser variadas y lógicas según el contexto.**
-      
-      📢 **Ejemplo de una pregunta para la categoría "Razonamiento":**  
-      Pregunta: ¿Cuánto es 2 + 2?  
-      Opciones: 1, 2, 3, 4.  
-      Respuesta correcta: 4.
-      
-      🔹 **Genera un ejercicio siguiendo estas reglas y adaptado a la categoría "${categoria}".**
-      `;
+        // Construir el prompt para ChatGPT (manteniendo el contenido original)
+        const prompt = `
+        Eres un asistente especializado en generar ejercicios de estimulación cognitiva para adultos mayores (80 años en adelante). Tu objetivo es crear ejercicios simples, atractivos y adaptados a la categoría "${categoria}", utilizando un lenguaje claro, cotidiano y directo.
 
-      // Llamar a la API de ChatGPT para generar el ejercicio
-      const openAIDto = OpenAIDto.create({ prompt })[1];
-      const openAIResponse = await this.openaiDatasource.generateText(
-        openAIDto!,
-        EjercicioGeneradoZod
-      );
+        ## 📌 Instrucciones Generales
+        - Cada ejercicio debe incluir un **Relato** y una **Pregunta**. El relato debe ser breve (máximo 1-2 oraciones) y la pregunta debe formularse de forma explícita.
+        - Todas las opciones de respuesta deben ser de **una sola palabra**.
+        - La respuesta correcta debe coincidir exactamente con una de las opciones.
+        - El contenido y las opciones deben ser coherentes, variadas y adecuados para adultos mayores.
 
-      // Validar y estructurar la respuesta de ChatGPT
-      const ejercicioValidado = EjercicioGeneradoZod.parse(openAIResponse);
+        ${categorySpecificPrompt}
 
-      // Buscar URLs de imágenes para todas las opciones
-      const opcionesConImagenes = await Promise.all(
-        ejercicioValidado.contenido.opciones.map(
-          async (opcion: { texto: string; imagen?: string }) => {
-            try {
-              let imagenUrl = "";
-              if (opcion.texto.trim() !== "") {
-                imagenUrl =
+        ## 🔹 Estructura del Ejercicio (Formato JSON)
+        El ejercicio debe seguir el siguiente formato:
+
+        [
+          {
+            "titulo": "Ejercicio de ${categoria}: Relato y Pregunta",
+            "descripcion": "Ejercicio en el que debes leer un breve relato y responder la pregunta formulada, seleccionando una sola palabra.",
+            "tipo": "completar",
+            "dificultad": "baja",
+            "instrucciones": "Lee el enunciado, que se divide en 'Relato:' y 'Pregunta:', y selecciona la respuesta correcta.",
+            "contenido": {
+              "tipo_contenido": "texto",
+              "contenido": "Relato: María fue al mercado y compró manzanas frescas. Pregunta: ¿Qué compró?"
+            },
+            "opciones": [
+              { "texto": "manzanas", "imagen": "https://images.unsplash.com/photo-1631342994537-34291c2ad1c6?crop=entropy&cs=srgb&fm=jpg&q=85" },
+              { "texto": "peras", "imagen": "https://images.unsplash.com/photo-1574207967175-7e1318661137?crop=entropy&cs=srgb&fm=jpg&q=85" },
+              { "texto": "naranjas", "imagen": "https://images.unsplash.com/photo-1505676707757-405c0fc83b56?crop=entropy&cs=srgb&fm=jpg&q=85" },
+              { "texto": "uvas", "imagen": "https://images.unsplash.com/photo-1509680415089-7f6c7d90d8a0?crop=entropy&cs=srgb&fm=jpg&q=85" }
+            ],
+            "respuesta_correcta": ["manzanas"]
+          }
+        ]
+
+        ⚠ **Reglas Importantes:**
+        - Cada ejercicio debe incluir al menos 4 opciones de respuesta, y cada opción debe ser **una sola palabra**.
+        - El enunciado debe contener un relato breve y una pregunta clara, separadas por etiquetas (por ejemplo, "Relato:" y "Pregunta:").
+        - La respuesta correcta debe coincidir exactamente con una de las opciones.
+        - Asegúrate de que el relato, la pregunta y las opciones sean coherentes, atractivos y adaptados a un nivel sencillo para adultos mayores.
+
+        📢 **Ejemplo Adicional para "Atención y Razonamiento":**  
+        - Contenido: "Relato: 2, 4, __, 8. Pregunta: ¿Cuál es el número que falta?"  
+        - Opciones: "6", "5", "7", "9"  
+        - Respuesta correcta: "6".
+
+        🔹 **Genera un ejercicio siguiendo estas reglas y adaptado a la categoría "${categoria}".**
+        `;
+
+        // Llamar a la API de ChatGPT para generar el ejercicio
+        const openAIDto = OpenAIDto.create({ prompt })[1];
+        const openAIResponse = await this.openaiDatasource.generateTextImage(
+          openAIDto!,
+          EjercicioGeneradoZod
+        );
+
+        // Validar y estructurar la respuesta de ChatGPT
+        const ejercicioValidado = EjercicioGeneradoZod.parse(openAIResponse);
+
+        // Buscar URLs de imágenes para todas las opciones sin usar caché
+        const opcionesConImagenes = await Promise.all(
+          ejercicioValidado.contenido.opciones.map(
+            async (opcion: { texto: string; imagen?: string }) => {
+              const trimmedText = opcion.texto.trim();
+              if (!trimmedText) {
+                return {
+                  texto: opcion.texto,
+                  imagen: "URL_DE_IMAGEN_POR_DEFECTO",
+                };
+              }
+              try {
+                const imagenUrl =
                   (await this.googleSearchDatasource.getFirstImageUrl(
-                    opcion.texto
+                    trimmedText
                   )) || "URL_DE_IMAGEN_POR_DEFECTO";
                 console.log(
-                  `Buscando imagen para: ${opcion.texto} -> ${imagenUrl}`
+                  `Buscando imagen para: ${trimmedText} -> ${imagenUrl}`
                 );
+                return { texto: opcion.texto, imagen: imagenUrl };
+              } catch (error) {
+                console.error(
+                  `Error al buscar imagen para "${trimmedText}":`,
+                  error
+                );
+                return {
+                  texto: opcion.texto,
+                  imagen: "URL_DE_IMAGEN_POR_DEFECTO",
+                };
               }
-              return {
-                texto: opcion.texto,
-                imagen: imagenUrl || "URL_DE_IMAGEN_POR_DEFECTO", // Imagen por defecto si no encuentra
-              };
-            } catch (error) {
-              console.error(
-                `Error al buscar imagen para "${opcion.texto}":`,
-                error
-              );
-              return {
-                texto: opcion.texto,
-                imagen: "URL_DE_IMAGEN_POR_DEFECTO", // Imagen fallback
-              };
             }
-          }
-        )
-      );
+          )
+        );
 
-      // Reemplazar las opciones con las opciones que incluyen URLs de imágenes
-      ejercicioValidado.contenido.opciones = opcionesConImagenes;
+        // Reemplazar las opciones con las que incluyen URLs de imágenes
+        ejercicioValidado.contenido.opciones = opcionesConImagenes;
+        return ejercicioValidado;
+      }
+    );
 
-      ejercicios.push(ejercicioValidado);
-    }
-
-    return ejercicios;
+    // Espera a que se resuelvan todas las promesas y retorna el array final
+    const ejerciciosGenerados = await Promise.all(ejerciciosPromises);
+    return ejerciciosGenerados;
   }
 
-  recomendacionEjercicio = async (resultados: any): Promise<any> => {};
+  async generateRecomendaciones(
+    tendencia: string,
+    porcentajeExito: number,
+    tiempoTranscurrido: number
+  ): Promise<any> {
+    const prompt = `
+    Eres un asistente especializado en generar recomendaciones de ejercicios de estimulación cognitiva para adultos mayores. A continuación, te proporciono información sobre el desempeño de un usuario en un quiz:
+
+    - **Tendencia de errores:** ${tendencia}
+    - **Porcentaje de éxito:** ${porcentajeExito}%
+    - **Tiempo transcurrido:** ${tiempoTranscurrido} segundos
+
+    ## 📌 Instrucciones Generales
+    - Genera recomendaciones personalizadas basadas en la tendencia de errores.
+    - Sugiere ejercicios que ayuden a mejorar las áreas donde el usuario tuvo dificultades.
+    - Destaca las fortalezas del usuario y sugiere cómo puede seguir mejorando.
+
+    ## 🧠 Categorías de Ejercicios Recomendados
+    1. **Memoria** 🧠  
+       - Ejercicios que inviten a recordar datos o pequeñas anécdotas.
+    2. **Lenguaje** 🗣️  
+       - Ejercicios enfocados en la comprensión y estructuración del lenguaje.
+    3. **Atención** 🔢  
+       - Ejercicios que requieran identificar patrones o reconocer palabras faltantes.
+
+    ## 🔹 Estructura de la Respuesta (Formato JSON)
+    La respuesta debe seguir el siguiente formato:
+    {
+      "tendencia": "Descripción de la tendencia de errores",
+      "recomendaciones": ["Recomendación 1", "Recomendación 2", "Recomendación 3"],
+      "fortalezas": ["Fortaleza 1", "Fortaleza 2"]
+    }
+
+    ⚠ **Reglas Importantes:**
+    - Las recomendaciones deben ser claras y específicas.
+    - Las fortalezas deben basarse en el porcentaje de éxito y el tiempo transcurrido.
+
+    🔹 **Genera recomendaciones siguiendo estas reglas y adaptadas a la información proporcionada.**
+  `;
+
+    // Llamar a la IA para generar la cadena de búsqueda
+    const openAIDto = OpenAIDto.create({ prompt })[1];
+    const openAIResponse = await this.openaiDatasource.generateText(
+      openAIDto!,
+      RecomendacionesZod
+    );
+    // Retornar las recomendaciones generadas
+    return openAIResponse;
+  }
 }

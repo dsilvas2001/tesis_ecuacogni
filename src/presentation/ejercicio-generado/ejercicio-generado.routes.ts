@@ -21,6 +21,8 @@ export class EjercicioGeneradoRoutes {
       controller.getEjercicioGenerado
     );
 
+    router.post("/recomendaciones", controller.getRecomendaciones);
+
     return router;
   }
 }

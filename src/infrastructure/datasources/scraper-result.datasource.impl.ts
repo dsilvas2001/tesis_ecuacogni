@@ -20,7 +20,7 @@ export class ScraperResultDatasourceImpl {
       concurrency: Cluster.CONCURRENCY_CONTEXT,
       maxConcurrency: 3,
       retryLimit: 5,
-      timeout: 30000,
+      timeout: 10000,
       puppeteerOptions: { args: ["--no-sandbox"] },
     });
   }
@@ -29,99 +29,44 @@ export class ScraperResultDatasourceImpl {
     const results: any[] = [];
 
     try {
-      // Obtener URLs de búsqueda
+      // Paso 1: Obtener URLs de búsqueda
       const urls = await this.googleSearch.performSearch(categoria);
       console.log("URLs obtenidas:", urls);
+      if (urls.length === 0) {
+        console.warn("No se encontraron URLs para la categoría:", categoria);
+        return [];
+      }
       this.searchCustom = categoria;
 
-      // Selecciona aleatoriamente 5 URLs para procesar
-      const getRandomUrls = (array: string[], count: number): string[] => {
-        const shuffled = [...array].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, count);
-      };
-
-      const randomUrls = getRandomUrls(urls, 5);
-      console.log("URLs aleatorias seleccionadas:", randomUrls);
-
-      // Agregar las URLs seleccionadas a la cola con manejo de errores
-      for (const url of randomUrls) {
-        try {
-          await this.cluster.queue(url);
-        } catch (error) {
-          console.error(`Error al agregar URL a la cola: ${url}`, error);
-        }
-      }
-
-      // Definir la tarea del cluster
+      // Paso 2: Definir la tarea del cluster (con timeout reducido a 4 segundos)
       await this.cluster.task(async ({ page, data: url }) => {
         try {
           await page.goto(url, {
             waitUntil: "domcontentloaded",
-            timeout: 60000,
+            timeout: 4000, // Ajustado a 4 segundos
           });
           console.log(`Procesando URL: ${url}`);
-
           const data = await page.evaluate(() => {
-            const titulo =
-              document.querySelector("h1")?.textContent?.trim() || null;
-            const descripcion =
-              Array.from(document.querySelectorAll("p"))
-                .slice(0, 3)
-                .map((p) => p.textContent?.trim())
-                .filter((text) => text && text.length > 20)
-                .join(" ") || null;
-
-            // const nombre_categoria = titulo || null;
-            // const descripcion_categoria =
-            //   Array.from(document.querySelectorAll("p"))
-            //     .slice(0, 2)
-            //     .map((p) => p.textContent?.trim())
-            //     .filter((text) => text && text.length > 20)
-            //     .join(" ") || null;
-
-            const nombre_fuentes = titulo || null;
-            const autor =
-              document
+            const titulo = document.querySelector("h1")?.textContent;
+            const descripcion = document
+              .querySelector('meta[name="description"]')
+              ?.getAttribute("content");
+            const fuente = {
+              nombre: document
                 .querySelector('meta[name="author"]')
-                ?.getAttribute("content") ||
-              document
-                .querySelector('meta[property="og:site_name"]')
-                ?.getAttribute("content") ||
-              new URL(window.location.href).hostname
-                .replace("www.", "")
-                .split(".")[0] ||
-              null;
-
-            return {
-              titulo,
-              descripcion,
-              // categoria: {
-              //   nombre: nombre_categoria,
-              //   descripcion: descripcion_categoria?.substring(0, 200) || null,
-              // },
-              fuente: {
-                nombre: nombre_fuentes,
-                url: window.location.href,
-                autor,
-              },
+                ?.getAttribute("content"),
+              url: window.location.href,
+              autor: document
+                .querySelector('meta[name="author"]')
+                ?.getAttribute("content"),
             };
+            return { titulo, descripcion, fuente };
           });
 
-          if (
-            data.titulo &&
-            data.descripcion &&
-            // data.categoria?.descripcion &&
-            data.fuente?.url
-          ) {
+          if (data.titulo && data.descripcion && data.fuente?.url) {
             results.push({
               titulo: data.titulo.toString(),
               descripcion: data.descripcion,
-              // categoria: [
-              //   {
-              //     nombre: data.categoria.nombre!.toString(),
-              //     descripcion: data.categoria.descripcion,
-              //   },
-              // ],
               fuente: [
                 {
                   nombre: data.fuente.nombre?.toString(),
@@ -130,45 +75,39 @@ export class ScraperResultDatasourceImpl {
                 },
               ],
             });
-          } else {
-            console.warn(`Datos incompletos extraídos de: ${url}`);
           }
         } catch (error) {
-          console.error(`Error procesando la URL: ${url}`, error);
+          console.error(`Error procesando ${url}:`, error);
         }
       });
 
+      // Paso 3: Seleccionar y encolar URLs de forma concurrente
+      const randomUrls = this.getRandomUrls(urls, 2);
+      console.log("URLs aleatorias:", randomUrls);
+      await Promise.all(randomUrls.map((url) => this.cluster.queue(url)));
+
+      // Paso 4: Esperar a que finalice el procesamiento y cerrar el cluster
       await this.cluster.idle();
       await this.cluster.close();
     } catch (error) {
-      console.error("Error general en el scraper:", error);
+      console.error("Error general:", error);
+      return [];
     }
 
-    // Filtrar resultados válidos
-    // const filteredResults = results.filter(
-    //   (item) => item.titulo && item.descripcion && item.fuente?.url
-    // );
+    // Filtrado de resultados y guardado en BD
     const filteredResults = results.filter(
-      (item) => item.titulo && item.descripcion && item.fuente![0].url
+      (item) => item.titulo && item.descripcion && item.fuente[0].url
     );
     console.log("Resultados filtrados:", filteredResults);
+    return this.guardarEjercicios(filteredResults);
+  }
 
-    // Guardar los resultados en la base de datos
-    try {
-      const savedEjercicios = await this.guardarEjercicios(filteredResults);
-      // console.log("Resultados guardados:", savedEjercicios);
-      return savedEjercicios;
-    } catch (error) {
-      console.error(
-        "Error al guardar los resultados en la base de datos:",
-        error
-      );
-      return []; // Retorna un array vacío en caso de error
-    }
+  // Método de clase para selección aleatoria
+  private getRandomUrls(array: string[], count: number): string[] {
+    return [...array].sort(() => 0.5 - Math.random()).slice(0, count);
   }
 
   private async guardarEjercicios(ejercicios: any[]): Promise<any[]> {
-    // Crear un grupo de scraping
     const scrapingGroup = await ScrapingGroupModel.create({
       nombre: "Grupo de ejercicios generados",
       descripcion: this.searchCustom,
@@ -177,14 +116,12 @@ export class ScraperResultDatasourceImpl {
     const savedEjercicios = [];
 
     for (const ejercicio of ejercicios) {
-      // Guardar el resultado del scraping
       const scrapingResult = await ScrapingResultModel.create({
         url: ejercicio.fuente[0].url,
         contenido: ejercicio,
-        estado: "exitoso", // Puedes cambiar esto según el resultado
+        estado: "exitoso",
       });
 
-      // Asociar el resultado al grupo de scraping
       await ScrapingGroupItemModel.create({
         id_grupo: scrapingGroup._id,
         id_scraping: scrapingResult._id,
@@ -192,7 +129,6 @@ export class ScraperResultDatasourceImpl {
 
       savedEjercicios.push(scrapingResult);
     }
-
     return savedEjercicios;
   }
 }
