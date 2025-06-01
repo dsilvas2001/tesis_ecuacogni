@@ -13,8 +13,14 @@ MongoDatabase.connect({
   dbName: envs.MONGO_DB_NAME,
   mongoURL: envs.MONGO_URL,
 });
+const corsOptions = {
+  origin: ["http://localhost:4200", "https://front-tesis-ls9g.onrender.com"],
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
 
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(AppRoutes.routes);
 
