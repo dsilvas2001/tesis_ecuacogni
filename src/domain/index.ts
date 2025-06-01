@@ -9,6 +9,7 @@ export * from "./datasources/referencias-signosv.datasource";
 export * from "./datasources/signos-vitales.datasource";
 export * from "./datasources/ejercicio-paciente.datasource";
 export * from "./datasources/ejercicio-generado.datasource";
+export * from "./datasources/ejercicio-resultado.datasource";
 
 // DTOS
 
@@ -33,6 +34,7 @@ export * from "./entities/usuarios.entity";
 export * from "./entities/paciente.entity";
 export * from "./entities/referencias-signosv.entity";
 export * from "./entities/signos-vitales.entity";
+export * from "./entities/ejercicio-resultado.entity";
 
 // Repositories
 export * from "./repositories/scraper-general.repository";
@@ -44,6 +46,7 @@ export * from "./repositories/referencias-signosv.repository";
 export * from "./repositories/signos-vitales.repository";
 export * from "./repositories/ejercicio-paciente.repository";
 export * from "./repositories/ejercicio-generado.repository";
+export * from "./repositories/ejercicio-resultado.repository";
 
 // Use Cases
 

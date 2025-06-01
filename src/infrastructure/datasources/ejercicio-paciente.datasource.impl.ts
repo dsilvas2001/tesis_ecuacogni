@@ -5,6 +5,7 @@ import {
   SignosVitalesModel,
   UsuariosModel,
 } from "../../data/mongodb/models";
+import { EjercicioResultadosModel } from "../../data/mongodb/models/ejercicio-resultado.model";
 import {
   EjercicioPacienteDataSource,
   OpenAIDto,
@@ -37,15 +38,12 @@ export class EjercicioPacienteDatasourceImpl
       const fechaFin = new Date(fechaInicio);
       fechaFin.setHours(23, 59, 59, 999);
 
-      // Filtro para buscar signos vitales en la fecha seleccionada
-      const filtroSignosVitales: any = {
+      // 1. Buscar signos vitales (igual que antes)
+      const signosVitales = await SignosVitalesModel.find({
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
         deletedAt: null,
-        "analisis_ia.statusSV": "estable", // Solo pacientes con signos vitales estables
-      };
-
-      // Buscar los signos vitales en la fecha seleccionada
-      const signosVitales = await SignosVitalesModel.find(filtroSignosVitales)
+        "analisis_ia.statusSV": "estable",
+      })
         .populate({
           path: "id_paciente",
           model: PacientesModel,
@@ -58,56 +56,35 @@ export class EjercicioPacienteDatasourceImpl
         })
         .exec();
 
-      // Obtener los IDs de los pacientes con signos vitales estables
       const pacientesEstables = signosVitales.map(
         (signo) => signo.id_paciente._id
       );
 
-      // Filtro para buscar ejercicios en la fecha seleccionada
-      const filtroEjercicios: any = {
+      // 2. Buscar RESULTADOS de ejercicios (nuevo)
+      const resultadosEjercicios = await EjercicioResultadosModel.find({
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
-        id_paciente: { $in: pacientesEstables }, // Solo pacientes con signos vitales estables
-        deletedAt: null,
-      };
+        "paciente.id_paciente": {
+          $in: pacientesEstables.map((id) => id.toString()),
+        },
+      }).exec();
 
-      // Buscar los ejercicios en la fecha seleccionada
-      const ejercicios = await PacienteEjerciciosModel.find(filtroEjercicios)
-        .populate({
-          path: "id_paciente",
-          model: PacientesModel,
-          select: "id_usuario",
-          populate: {
-            path: "id_usuario",
-            model: UsuariosModel,
-            select: "nombre apellido",
-          },
-        })
-        .populate({
-          path: "id_ejercicio",
-          model: EjercicioModel,
-          select: "nombre descripcion",
-        })
-        .exec();
-
-      // Mapear los resultados
+      // 3. Mapear resultados (conservando tu estructura original)
       const resultados = pacientesEstables.map((idPaciente) => {
         const paciente = signosVitales.find(
           (signo) => signo.id_paciente._id.toString() === idPaciente.toString()
         )?.id_paciente;
 
-        const ejercicioHoy = ejercicios.find((ejercicio) => {
-          return ejercicio.id_paciente._id.toString() === idPaciente.toString();
-        });
+        // Verificar si tiene resultados
+        const tieneResultados = resultadosEjercicios.some(
+          (res) => res.paciente!.id_paciente === idPaciente.toString()
+        );
 
         let estado;
-        let descripcion: string;
+        let descripcion;
 
-        if (ejercicioHoy) {
-          estado = ejercicioHoy.estado;
-          descripcion =
-            estado === "completo"
-              ? "Se realizó correctamente el ejercicio"
-              : "Falta completar el ejercicio";
+        if (tieneResultados) {
+          estado = "completo";
+          descripcion = "Se realizó correctamente el ejercicio";
         } else {
           estado = "pendiente";
           descripcion = "Falta de realizar el ejercicio o asignar";
@@ -118,25 +95,19 @@ export class EjercicioPacienteDatasourceImpl
           nombre: (paciente as any).id_usuario.nombre,
           apellido: (paciente as any).id_usuario.apellido,
           estado,
-          date: ejercicioHoy
-            ? {
-                fecha: ejercicioHoy.createdAt.toLocaleDateString(),
-                hora: ejercicioHoy.createdAt.toLocaleTimeString(),
-              }
-            : {
-                fecha: fechaInicio.toLocaleDateString(),
-                hora: new Date().toLocaleTimeString(),
-              },
+          date: {
+            fecha: fechaInicio.toLocaleDateString(),
+            hora: new Date().toLocaleTimeString(),
+          },
           descripcion,
         };
       });
-      // Filtrar por estado si no es "todos"
+
+      // Filtrar por estado (igual que antes)
       if (estadoEjercicio && estadoEjercicio !== "todos") {
-        const filtrados = resultados.filter(
+        return resultados.filter(
           (resultado) => resultado.estado === estadoEjercicio
         );
-        console.log("Filtrados por estado:", filtrados);
-        return filtrados;
       }
 
       return resultados;
@@ -157,43 +128,36 @@ export class EjercicioPacienteDatasourceImpl
       const fechaFin = new Date(fechaInicio);
       fechaFin.setHours(23, 59, 59, 999);
 
-      // Filtro para buscar signos vitales en la fecha seleccionada
-      const filtroSignosVitales: any = {
+      // 1. Buscar pacientes estables
+      const signosVitales = await SignosVitalesModel.find({
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
         deletedAt: null,
-        "analisis_ia.statusSV": "estable", // Solo pacientes con signos vitales estables
-      };
+        "analisis_ia.statusSV": "estable",
+      }).exec();
 
-      // Buscar los signos vitales en la fecha seleccionada
-      const signosVitales = await SignosVitalesModel.find(filtroSignosVitales)
-        .populate({ path: "id_paciente", model: PacientesModel })
-        .exec();
-
-      // Obtener los IDs de los pacientes con signos vitales estables
-      const pacientesEstables = signosVitales.map(
+      const pacientesEstablesIds = signosVitales.map(
         (signo) => signo.id_paciente._id
       );
 
-      // Filtro para buscar ejercicios asignados hoy
-      const filtroEjerciciosAsignados: any = {
+      // 2. Buscar qué pacientes completaron ejercicios hoy
+      const resultados = await EjercicioResultadosModel.find({
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
-        id_paciente: { $in: pacientesEstables }, // Solo pacientes con signos vitales estables
-        deletedAt: null,
-      };
+        "paciente.id_paciente": {
+          $in: pacientesEstablesIds.map((id) => id.toString()),
+        },
+      }).exec();
 
-      // Contar ejercicios asignados hoy
-      const ejerciciosAsignados = await PacienteEjerciciosModel.countDocuments(
-        filtroEjerciciosAsignados
-      );
-
-      // Contar pacientes estables sin ejercicios asignados hoy (pendientes)
+      // 3. Calcular métricas
+      const pacientesCompletados = [
+        ...new Set(resultados.map((res) => res.paciente!.id_paciente)),
+      ].length;
       const pacientesPendientes =
-        pacientesEstables.length - ejerciciosAsignados;
+        pacientesEstablesIds.length - pacientesCompletados;
 
       return {
-        pacientesEstables: pacientesEstables.length, // Total de pacientes estables
-        ejerciciosAsignados, // Ejercicios asignados hoy
-        pacientesPendientes, // Pacientes estables sin ejercicios asignados hoy
+        pacientesEstables: pacientesEstablesIds.length,
+        pacientesCompletados, // Pacientes con ejercicios registrados hoy
+        pacientesPendientes, // Pacientes sin ejercicios registrados hoy
       };
     } catch (error) {
       console.error("Error al contar los ejercicios:", error);
@@ -204,31 +168,34 @@ export class EjercicioPacienteDatasourceImpl
   async selectCategoria(signosVitalesDto: SignosVitalesDto): Promise<any> {
     try {
       // Construir el prompt con los datos del DTO
+
       const prompt = `
-      Eres un asistente médico de IA especializado en el monitoreo y análisis de signos vitales de los pacientes. Debes proporcionar una evaluación médica detallada en **español**, asegurando **coherencia** en la asignación de categorías.  
+      Eres un asistente médico de inteligencia artificial especializado en el monitoreo de signos vitales y su impacto en las funciones cognitivas. Tu tarea es analizar los signos vitales de un paciente y, solo si se encuentra clínicamente estable, asignar **una o más categorías de estimulación cognitiva**. La respuesta debe estar redactada en **español formal**, con una evaluación médica coherente, concisa y justificada.
       
-      ### **Datos actuales de signos vitales:**  
+      ### Datos actuales de signos vitales:
       - **Presión arterial:** ${signosVitalesDto.presion_arterial!.sistolica}/${
         signosVitalesDto.presion_arterial!.diastolica
-      } mmHg  
-      - **Frecuencia cardíaca:** ${signosVitalesDto.frecuencia_cardiaca} bpm  
+      } mmHg
+      - **Frecuencia cardíaca:** ${signosVitalesDto.frecuencia_cardiaca} bpm
       - **Frecuencia respiratoria:** ${
         signosVitalesDto.frecuencia_respiratoria
-      } respiraciones/min  
-      - **Temperatura:** ${signosVitalesDto.temperatura} °C  
+      } respiraciones/min
+      - **Temperatura:** ${signosVitalesDto.temperatura} °C
       
-      ### **Instrucciones:**  
-      1. **Solo puedes seleccionar las siguientes categorías** y no debes inventar nuevas:
+      ### Instrucciones:
+      1. Evalúa si el paciente presenta un estado clínico **estable**: todos los signos vitales deben estar dentro de rangos normales o presentar solo alteraciones **leves** y sin riesgo inmediato.
+      2. **Solo si el paciente está estable**, elige **una o más de las siguientes categorías** de estimulación cognitiva:
          - **Memoria**
          - **Atención**
          - **Lenguaje**
-         - **Razonamiento**  
-      2. **Siempre** selecciona la misma categoría para signos vitales similares.  
-      3. Selecciona **una o mas categorías** de estimulación cognitiva según la siguiente guía:
-         - **Memoria** → Presión baja o hipoxia afectan la retención de información.
-         - **Atención** → Fiebre o taquicardia afectan la concentración.
-         - **Lenguaje** → Signos estables o leve alteración cognitiva.
-         - **Razonamiento** → Estrés cardiovascular o alta carga mental.  
+      3. Aplica la siguiente lógica clínica:
+         - **Memoria**: Leve hipotensión, fatiga o ligera hipoxia pueden estar relacionadas con dificultades de retención.
+         - **Atención**: Leve fiebre (≤ 37.8 °C), ligera taquicardia (hasta 100 bpm) o respiración algo elevada (hasta 22 rpm) pueden afectar la concentración.
+         - **Lenguaje**: Todos los signos vitales dentro de rango normal, sin alteraciones relevantes → posibles efectos leves en el lenguaje.
+      
+      4. Si hay **signos vitales alterados de forma moderada o grave**, concluye que **no es recomendable realizar ejercicios cognitivos** en este momento.
+      
+      Entrega una breve evaluación médica justificada. Sé preciso y evita generalizar.
       `;
 
       // Llamar a la IA para generar el análisis
