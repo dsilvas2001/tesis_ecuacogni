@@ -56,6 +56,10 @@ export class SignosVitalesController {
   };
 
   findByPacienteAndFecha = async (req: Request, res: Response) => {
+    console.log("ENTRANDO A FIND BY PACIENTE Y FECHA");
+    console.log("ID PACIENTE:", req.params.id);
+    console.log("FECHA:", req.params.fecha);
+
     new SignosVitalesUseCase(this.signosVitalesRepository)
       .executeFindByPacienteAndFecha(req.params.id, req.params.fecha)
       .then((data) => res.json(data))
@@ -70,14 +74,17 @@ export class SignosVitalesController {
   countgetSignosV = async (req: Request, res: Response) => {
     new SignosVitalesUseCase(this.signosVitalesRepository)
 
-      .executeCountAll(req.params.fecha)
+      .executeCountAll(req.params.fecha, req.params.centroId)
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };
 
   getAllSignosV = async (req: Request, res: Response) => {
+    console.log("ENTRANDO A FIND BY PACIENTE Y FECHA");
+    console.log("ID PACIENTE:", req.params.id);
+    console.log("FECHA:", req.params.fecha);
     new SignosVitalesUseCase(this.signosVitalesRepository)
-      .executeAll(req.params.fecha, req.params.status)
+      .executeAll(req.params.fecha, req.params.status, req.params.centroId)
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };

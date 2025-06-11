@@ -8,5 +8,5 @@ export abstract class UsuarioRepository {
     password: string
   ): Promise<UserEntity>;
 
-  abstract countAllHOME(): Promise<any>;
+  abstract countAllHOME(centroId: string): Promise<any>;
 }

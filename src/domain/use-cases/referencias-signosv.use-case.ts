@@ -23,16 +23,18 @@ export class ReferenciaSignosVUseCase {
     );
   }
 
-  async executeAll() {
-    return await this.referenciaSignosVRepository.findAll();
+  async executeAll(centroId: string) {
+    return await this.referenciaSignosVRepository.findAll(centroId);
   }
 
-  async executeCount() {
-    return await this.referenciaSignosVRepository.countAll();
+  async executeCount(centroId: string) {
+    return await this.referenciaSignosVRepository.countAll(centroId);
   }
 
-  async executeNotReferenciaSignosV() {
-    return await this.referenciaSignosVRepository.findNotReferenciaSignosV();
+  async executeNotReferenciaSignosV(centroId: string) {
+    return await this.referenciaSignosVRepository.findNotReferenciaSignosV(
+      centroId
+    );
   }
 
   async executeDelete(id_paciente: string) {

@@ -5,7 +5,15 @@ export class PacienteMapper {
   static pacienteEntityFromObject(object: {
     [key: string]: any;
   }): PacienteEntity {
-    const { _id, nombre, apellido, edad, genero, id_rol } = object;
+    const {
+      _id,
+      nombre,
+      apellido,
+      edad,
+      genero,
+      id_centro_gerontologico,
+      id_rol,
+    } = object;
 
     // Validaciones básicas con mensajes de error claros
     if (!_id) {

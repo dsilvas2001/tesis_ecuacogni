@@ -10,6 +10,7 @@ export * from "./datasources/signos-vitales.datasource";
 export * from "./datasources/ejercicio-paciente.datasource";
 export * from "./datasources/ejercicio-generado.datasource";
 export * from "./datasources/ejercicio-resultado.datasource";
+export * from "./datasources/centro-gerontologico.datasource";
 
 // DTOS
 
@@ -21,6 +22,7 @@ export * from "./dtos/usuarios.dto";
 export * from "./dtos/paciente.dto";
 export * from "./dtos/referencias-signosv.dto";
 export * from "./dtos/signos-vitales.dto";
+export * from "./dtos/centro-gerontologico.dto";
 
 // Entities
 
@@ -47,6 +49,7 @@ export * from "./repositories/signos-vitales.repository";
 export * from "./repositories/ejercicio-paciente.repository";
 export * from "./repositories/ejercicio-generado.repository";
 export * from "./repositories/ejercicio-resultado.repository";
+export * from "./repositories/centro-gerontologico.repository";
 
 // Use Cases
 

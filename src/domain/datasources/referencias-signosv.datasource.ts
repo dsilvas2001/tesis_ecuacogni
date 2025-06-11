@@ -15,11 +15,13 @@ export abstract class ReferenciaSignosVDataSource {
     referenciaSignosVdto: ReferenciaSignosVDto
   ): Promise<ReferenciaSignosVEntity>;
 
-  abstract findAll(): Promise<ReferenciaSignosVEntity[]>;
+  abstract findAll(centroId: string): Promise<ReferenciaSignosVEntity[]>;
 
-  abstract countAll(): Promise<CountResultReferenciaSignosV>;
+  abstract countAll(centroId: string): Promise<CountResultReferenciaSignosV>;
 
-  abstract findNotReferenciaSignosV(): Promise<NotReferenciaSignoVEntity[]>;
+  abstract findNotReferenciaSignosV(
+    centroId: string
+  ): Promise<NotReferenciaSignoVEntity[]>;
 
   abstract delete(id_paciente: string): Promise<string>;
 }

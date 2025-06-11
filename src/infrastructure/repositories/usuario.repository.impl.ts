@@ -18,7 +18,7 @@ export class UsuarioRepositoryImpl implements UsuarioRepository {
   ): Promise<UserEntity> {
     return await this.usuarioDatasource.findByCredentials(email, password);
   }
-  async countAllHOME(): Promise<any> {
-    return await this.usuarioDatasource.countAllHOME();
+  async countAllHOME(centroId: string): Promise<any> {
+    return await this.usuarioDatasource.countAllHOME(centroId);
   }
 }

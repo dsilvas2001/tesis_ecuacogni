@@ -26,15 +26,20 @@ export class SignosVitalesUseCase {
     );
   }
 
-  async executeAll(fechaSeleccionada: string, statusSV: string) {
+  async executeAll(
+    fechaSeleccionada: string,
+    statusSV: string,
+    centroId: string
+  ) {
     return await this.signosVitalesRepository.findAll(
       fechaSeleccionada,
-      statusSV
+      statusSV,
+      centroId
     );
   }
 
-  async executeCountAll(fechaString: string) {
-    return await this.signosVitalesRepository.countAll(fechaString);
+  async executeCountAll(fechaString: string, centroId: string) {
+    return await this.signosVitalesRepository.countAll(fechaString, centroId);
   }
 
   async executeDelete(id_paciente: string, fecha: string) {

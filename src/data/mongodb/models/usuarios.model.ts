@@ -23,6 +23,16 @@ const usuariosSchema = new Schema(
       ref: "Rol",
       required: [true, "ID de Rol es requerido"],
     },
+    id_centro_gerontologico: {
+      // <-- Nueva relación
+      type: Schema.Types.ObjectId,
+      ref: "CentroGerontologico",
+      default: null,
+    },
+    es_administrador: {
+      type: Boolean,
+      default: false,
+    },
     deletedAt: {
       type: Date,
       default: null,

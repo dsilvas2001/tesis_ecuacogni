@@ -22,14 +22,15 @@ export class EjercicioPacienteController {
     new EjercicioPacienteUseCase(this.ejercicioPacienteRepository)
       .executeAll(
         req.params.fecha,
-        req.params.status as "completo" | "incompleto" | "pendiente" | "todos"
+        req.params.status as "completo" | "incompleto" | "pendiente" | "todos",
+        req.params.centroId
       )
       .then((data) => res.status(200).json(data))
       .catch((error) => this.handleError(error, res));
   };
   getCountEjercicio = (req: Request, res: Response) => {
     new EjercicioPacienteUseCase(this.ejercicioPacienteRepository)
-      .executeCount()
+      .executeCount(req.params.centroId)
       .then((data) => res.status(200).json(data))
       .catch((error) => this.handleError(error, res));
   };

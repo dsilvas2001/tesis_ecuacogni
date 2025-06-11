@@ -8,15 +8,17 @@ export class EjercicioPacienteUseCase {
 
   async executeAll(
     fechaSeleccionada: string,
-    statusSV: "completo" | "incompleto" | "pendiente" | "todos"
+    statusSV: "completo" | "incompleto" | "pendiente" | "todos",
+    centroId: string
   ) {
     return await this.ejercicioPacienteRepository.findAll(
       fechaSeleccionada,
-      statusSV
+      statusSV,
+      centroId
     );
   }
-  async executeCount() {
-    return await this.ejercicioPacienteRepository.countAll();
+  async executeCount(centroId: string) {
+    return await this.ejercicioPacienteRepository.countAll(centroId);
   }
   async executeSelectCaregoria(signosVitalesDto: SignosVitalesDto) {
     return await this.ejercicioPacienteRepository.selectCategoria(

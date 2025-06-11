@@ -32,19 +32,21 @@ export class ReferenciaSignosVRepositoryImpl
     );
   }
 
-  async findAll(): Promise<ReferenciaSignosVEntity[]> {
-    return this.referenciaSignosVDatasource.findAll();
+  async findAll(centroId: string): Promise<ReferenciaSignosVEntity[]> {
+    return this.referenciaSignosVDatasource.findAll(centroId);
   }
 
-  async findNotReferenciaSignosV(): Promise<NotReferenciaSignoVEntity[]> {
-    return this.referenciaSignosVDatasource.findNotReferenciaSignosV();
+  async findNotReferenciaSignosV(
+    centroId: string
+  ): Promise<NotReferenciaSignoVEntity[]> {
+    return this.referenciaSignosVDatasource.findNotReferenciaSignosV(centroId);
   }
 
   async delete(id: string): Promise<string> {
     return this.referenciaSignosVDatasource.delete(id);
   }
 
-  async countAll(): Promise<CountResultReferenciaSignosV> {
-    return this.referenciaSignosVDatasource.countAll();
+  async countAll(centroId: string): Promise<CountResultReferenciaSignosV> {
+    return this.referenciaSignosVDatasource.countAll(centroId);
   }
 }

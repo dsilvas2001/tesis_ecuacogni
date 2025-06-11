@@ -56,15 +56,19 @@ export class ReferenciaSignosVController {
   };
 
   getAllReferenciaSignosV = async (req: Request, res: Response) => {
+    const centroId = req.params.centroId;
+
     new ReferenciaSignosVUseCase(this.referenciaSignosVRepository)
-      .executeAll()
+      .executeAll(centroId)
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };
 
   getNotReferenciaSignosV = async (req: Request, res: Response) => {
+    const centroId = req.params.centroId;
+
     new ReferenciaSignosVUseCase(this.referenciaSignosVRepository)
-      .executeNotReferenciaSignosV()
+      .executeNotReferenciaSignosV(centroId)
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };
@@ -77,8 +81,9 @@ export class ReferenciaSignosVController {
   };
 
   getCountReferenciaSignosV = async (req: Request, res: Response) => {
+    const centroId = req.params.centroId;
     new ReferenciaSignosVUseCase(this.referenciaSignosVRepository)
-      .executeCount()
+      .executeCount(centroId)
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };

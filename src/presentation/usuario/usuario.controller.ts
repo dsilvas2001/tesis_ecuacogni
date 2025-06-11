@@ -41,18 +41,32 @@ export class UsuarioController {
         return;
       }
 
-      // Generar el token JWT
+      // Generar token con ambos IDs
       const token = await JwtAdapter.generateToken({
-        id: user.id,
+        id: user.id, // ID del usuario
+        id_rol: user.id_rol, // ID del rol
         nombre: user.nombre,
         apellido: user.apellido,
         email: user.email,
-        rol: user.roles,
+        rol: user.roles, // Nombre del rol
+        tiene_centro_asignado: user.tiene_centro_asignado,
+        es_administrador: user.es_administrador,
+        centro_info: user.centro_info,
       });
-      console.log("User Object:", user);
 
       res.status(200).json({
-        email: user.email,
+        user: {
+          id: user.id, // ID del usuario
+          id_rol: user.id_rol, // ID del rol
+          nombre: user.nombre,
+          apellido: user.apellido,
+          email: user.email,
+          rol: user.roles, // Nombre del rol
+          experiencia_anios: user.experiencia_anios,
+          tiene_centro_asignado: user.tiene_centro_asignado,
+          es_administrador: user.es_administrador,
+          centro_info: user.centro_info,
+        },
         token,
       });
     } catch (error) {
@@ -62,7 +76,7 @@ export class UsuarioController {
 
   getCountAllHOME = async (req: Request, res: Response): Promise<void> => {
     new UsuarioUseCase(this.userRepository)
-      .countAllHOME()
+      .countAllHOME(req.params.centroId)
       .then((data) => res.status(200).json(data))
       .catch((error) => this.handleError(error, res));
   };

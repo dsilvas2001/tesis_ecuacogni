@@ -29,17 +29,22 @@ export class SignosVitalesRepositoryImpl implements SignosVitalesRepository {
 
   async findAll(
     fechaSeleccionada: string,
-    statusSV: string
+    statusSV: string,
+    centroId: string
   ): Promise<SignosVitalesEntity[]> {
-    return this.signosVitalesDatasource.findAll(fechaSeleccionada, statusSV);
+    return this.signosVitalesDatasource.findAll(
+      fechaSeleccionada,
+      statusSV,
+      centroId
+    );
   }
 
   async delete(id_paciente: string, fecha: string): Promise<string> {
     return this.signosVitalesDatasource.delete(id_paciente, fecha);
   }
 
-  async countAll(fecha: string): Promise<CountResultSignosV> {
-    return this.signosVitalesDatasource.countAll(fecha);
+  async countAll(fecha: string, centroId: string): Promise<CountResultSignosV> {
+    return this.signosVitalesDatasource.countAll(fecha, centroId);
   }
 
   async findByPacienteAndFecha(

@@ -9,11 +9,11 @@ export class PacienteUseCase {
 
     return paciente;
   }
-  async executeAll() {
-    return await this.pacienteRepository.findAll();
+  async executeAll(centroId: string) {
+    return await this.pacienteRepository.findAll(centroId);
   }
-  async executeCount() {
-    return await this.pacienteRepository.countAll();
+  async executeCount(centroId: string) {
+    return await this.pacienteRepository.countAll(centroId);
   }
   async executeUpdate(id: string, userDto: PacienteDto) {
     return await this.pacienteRepository.update(id, userDto);

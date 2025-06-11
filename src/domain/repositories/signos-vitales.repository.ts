@@ -11,7 +11,8 @@ export abstract class SignosVitalesRepository {
 
   abstract findAll(
     fechaSeleccionada: string,
-    statusSV: string
+    statusSV: string,
+    centroId: string
   ): Promise<SignosVitalesEntity[]>;
 
   abstract update(
@@ -25,7 +26,10 @@ export abstract class SignosVitalesRepository {
     fecha: string
   ): Promise<SignosVitalesEntity>;
 
-  abstract countAll(fecha: string): Promise<CountResultSignosV>;
+  abstract countAll(
+    fecha: string,
+    centroId: string
+  ): Promise<CountResultSignosV>;
 
   abstract delete(id_paciente: string, fecha: string): Promise<string>;
 }

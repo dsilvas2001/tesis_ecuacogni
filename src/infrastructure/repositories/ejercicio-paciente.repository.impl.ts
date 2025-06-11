@@ -12,16 +12,18 @@ export class EjercicioPacienteRepositoryImpl
 
   async findAll(
     fechaSeleccionada: string,
-    estadoEjercicio: "completo" | "incompleto" | "pendiente" | "todos"
+    estadoEjercicio: "completo" | "incompleto" | "pendiente" | "todos",
+    centroId: string
   ): Promise<any[]> {
     return this.ejercicioPacienteDatasource.findAll(
       fechaSeleccionada,
-      estadoEjercicio
+      estadoEjercicio,
+      centroId
     );
   }
 
-  async countAll(): Promise<any> {
-    return this.ejercicioPacienteDatasource.countAll();
+  async countAll(centroId: string): Promise<any> {
+    return this.ejercicioPacienteDatasource.countAll(centroId);
   }
 
   async selectCategoria(signosVitalesDto: any): Promise<any> {

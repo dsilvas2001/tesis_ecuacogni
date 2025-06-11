@@ -33,15 +33,19 @@ export class PacienteController {
   };
 
   getAllPaciente = async (req: Request, res: Response) => {
+    const centroId = req.params.centroId;
+
     new PacienteUseCase(this.pacienteRepository)
-      .executeAll()
+      .executeAll(centroId)
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };
 
   countAllPaciente = async (req: Request, res: Response) => {
+    const centroId = req.params.centroId;
+
     new PacienteUseCase(this.pacienteRepository)
-      .executeCount()
+      .executeCount(centroId)
       .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };

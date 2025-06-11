@@ -17,13 +17,13 @@ export class SignosVitalesRoutes {
       pacienteEnrollmentRepositoryI
     );
 
-    router.get("/:fecha/:status", controller.getAllSignosV);
     router.get("/pacienteSV/:id/:fecha", controller.findByPacienteAndFecha);
+    router.get("/:fecha/:status/:centroId", controller.getAllSignosV);
     router.post("/register", controller.registerSignosVitales);
     router.put("/update/:id/:fecha", controller.updateSignosV);
     router.put("/delete/:id/:fecha", controller.deleteSignosV);
 
-    router.get("/count/:status/:fecha", controller.countgetSignosV);
+    router.get("/count/:status/:fecha/:centroId", controller.countgetSignosV);
 
     return router;
   }

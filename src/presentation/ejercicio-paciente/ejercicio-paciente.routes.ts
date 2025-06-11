@@ -15,8 +15,8 @@ export class EjercicioPacienteRoutes {
       pacienteEnrollmentRepositoryI
     );
 
-    router.get("/:fecha/:status", controller.getEjercicio);
-    router.get("/count", controller.getCountEjercicio);
+    router.get("/:fecha/:status/:centroId", controller.getEjercicio);
+    router.get("/count/:centroId", controller.getCountEjercicio);
     router.post("/select", controller.getSelectCategoria);
 
     return router;

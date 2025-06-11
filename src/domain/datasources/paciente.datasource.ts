@@ -7,13 +7,13 @@ import {
 export abstract class PacienteDatasource {
   abstract register(pacientedto: PacienteDto): Promise<PacienteEntity>;
 
-  abstract findAll(): Promise<PacienteEntity[]>;
+  abstract findAll(centroId: string): Promise<PacienteEntity[]>;
 
   abstract update(
     id: string,
     pacientedto: PacienteDto
   ): Promise<PacienteEntity>;
 
-  abstract countAll(): Promise<CountResultPaciente>;
+  abstract countAll(centroId: string): Promise<CountResultPaciente>;
   abstract delete(id: string): Promise<string>;
 }

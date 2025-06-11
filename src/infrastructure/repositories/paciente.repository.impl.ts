@@ -13,16 +13,16 @@ export class PacienteRepositoryImpl implements PacienteRepository {
     return this.pacienteDatasource.register(pacienteDto);
   }
 
-  async findAll(): Promise<PacienteEntity[]> {
-    return this.pacienteDatasource.findAll();
+  async findAll(centroId: string): Promise<PacienteEntity[]> {
+    return this.pacienteDatasource.findAll(centroId);
   }
 
   async update(id: string, pacienteDto: PacienteDto): Promise<PacienteEntity> {
     return this.pacienteDatasource.update(id, pacienteDto);
   }
 
-  async countAll(): Promise<CountResultPaciente> {
-    return this.pacienteDatasource.countAll();
+  async countAll(centroId: string): Promise<CountResultPaciente> {
+    return this.pacienteDatasource.countAll(centroId);
   }
 
   async delete(id: string): Promise<string> {

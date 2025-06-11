@@ -12,6 +12,7 @@ import {
 import { CustomError } from "../errors/custom.error";
 import { ReferenciaSignosVMapper } from "../mappers/referencias-signosv.mapper";
 import { CountResultReferenciaSignosV } from "../../domain/entities/referencias-signosv.entity";
+import mongoose from "mongoose";
 
 export class ReferenciaSignosVDatasourceImpl
   implements ReferenciaSignosVDataSource
@@ -116,89 +117,110 @@ export class ReferenciaSignosVDatasourceImpl
     }
   }
 
-  async findAll(): Promise<ReferenciaSignosVEntity[]> {
+  async findAll(centroId: string): Promise<ReferenciaSignosVEntity[]> {
     try {
-      // Busca todas las referencias de signos vitales no eliminadas
       const referencias = await ReferenciaSignosVitalesModel.find({
         deletedAt: null,
       })
         .populate({
-          path: "id_paciente", // Pobla el campo id_paciente
-          model: PacientesModel, // Usa el modelo Paciente
-          select: "id_usuario", // Selecciona solo el campo id_usuario del paciente
+          path: "id_paciente",
+          model: "Paciente",
+          select: "id_usuario",
           populate: {
-            path: "id_usuario", // Pobla el campo id_usuario del paciente
-            model: UsuariosModel, // Usa el modelo Usuario
-            select: "nombre apellido", // Selecciona solo nombre y apellido del usuario
+            path: "id_usuario",
+            model: "Usuarios", // Exactamente como en mongoose.model()
+            select: "nombre apellido id_centro_gerontologico",
+            match: {
+              id_centro_gerontologico: new mongoose.Types.ObjectId(centroId),
+            },
           },
         })
         .exec();
 
-      // Usa el mapper para transformar los objetos antes de retornarlos
+      const referenciasFiltradas = referencias.filter((ref) => {
+        const paciente = ref.id_paciente as any;
+        return paciente?.id_usuario?.id_centro_gerontologico;
+      });
+
       return ReferenciaSignosVMapper.referenciaSignosVAllEntitiesFromObjects(
-        referencias
+        referenciasFiltradas
       );
     } catch (error) {
-      console.error(
-        "Error al buscar las referencias de signos vitales:",
-        error
-      );
-      throw error;
+      console.error("Error al buscar referencias por centro:", error);
+      throw CustomError.internalServer();
     }
   }
 
-  async findNotReferenciaSignosV(): Promise<NotReferenciaSignoVEntity[]> {
+  async findNotReferenciaSignosV(
+    centroId: string
+  ): Promise<NotReferenciaSignoVEntity[]> {
     try {
-      // Obtener todas las referencias de signos vitales no eliminadas
+      // 1. Obtener todas las referencias de signos vitales no eliminadas
       const referencias = await ReferenciaSignosVitalesModel.find({
         deletedAt: null,
       })
         .select("id_paciente")
         .exec();
 
-      // Obtener todos los pacientes
-      const todosLosPacientes = await PacientesModel.find({ deletedAt: null })
+      // 2. Construir query base para pacientes
+      const pacienteQuery: any = { deletedAt: null };
+
+      // 3. Si se proporciona centroId, añadir filtro por centro
+      if (centroId) {
+        pacienteQuery.id_usuario = {
+          $in: await UsuariosModel.find({
+            id_centro_gerontologico: new mongoose.Types.ObjectId(centroId),
+            deletedAt: null,
+          })
+            .select("_id")
+            .exec(),
+        };
+      }
+
+      // 4. Obtener todos los pacientes (filtrados por centro si aplica)
+      const todosLosPacientes = await PacientesModel.find(pacienteQuery)
         .populate({
           path: "id_usuario",
           model: UsuariosModel,
           select: "nombre apellido",
+          match: { deletedAt: null },
         })
         .exec();
 
-      // Filtrar pacientes que NO tienen referencia en ReferenciaSignosVitalesModel
+      // 5. Filtrar pacientes sin referencia
       const pacientesSinReferencia = todosLosPacientes.filter((paciente) => {
+        // Verificar si el usuario existe (por el populate match)
+        if (!paciente.id_usuario) return false;
+
         return !referencias.some(
           (referencia) =>
             referencia.id_paciente.toString() === paciente._id.toString()
         );
       });
 
-      console.log("pacientesSinReferencia");
-      console.log("pacientesSinReferencia");
-      console.log(pacientesSinReferencia);
+      // 6. Mapear al formato de respuesta
+      return pacientesSinReferencia.map((paciente) => {
+        const usuario = paciente.id_usuario as unknown as {
+          nombre: string;
+          apellido: string;
+        };
 
-      // Mapear pacientes sin referencia al formato adecuado
-      return pacientesSinReferencia.map((paciente) => ({
-        id: paciente._id.toString(),
-
-        nombre: (paciente.id_usuario as any).nombre, // Valor predeterminado
-        apellido: (paciente.id_usuario as any).apellido, // Valor predeterminado
-        presion_arterial: "0", // Valor predeterminado
-        frecuencia_cardiaca: "0", // Valor predeterminado
-        frecuencia_respiratoria: "0", // Valor predeterminado
-        temperatura: "0", // Valor predeterminado
-        respiratorio: "0", // Valor predeterminado
-        // Puedes agregar más campos si lo necesitas
-      }));
+        return new NotReferenciaSignoVEntity(
+          paciente._id.toString(),
+          usuario.nombre,
+          usuario.apellido,
+          "0", // presion_arterial
+          "0", // frecuencia_cardiaca
+          "0", // frecuencia_respiratoria
+          "0", // temperatura
+          undefined // deletedAt
+        );
+      });
     } catch (error) {
-      console.error(
-        "Error al buscar pacientes sin referencia de signos vitales:",
-        error
-      );
-      throw error;
+      console.error("Error al buscar pacientes sin referencia:", error);
+      throw CustomError.internalServer();
     }
   }
-
   async delete(id_paciente: string): Promise<string> {
     try {
       const paciente = await ReferenciaSignosVitalesModel.findOne({
@@ -233,48 +255,78 @@ export class ReferenciaSignosVDatasourceImpl
     throw CustomError.internalServer();
   }
 
-  async countAll(): Promise<CountResultReferenciaSignosV> {
+  async countAll(centroId: string): Promise<CountResultReferenciaSignosV> {
     try {
       const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0); // Establecer la hora al inicio del día
+      hoy.setHours(0, 0, 0, 0);
 
-      const count_referentes =
-        await ReferenciaSignosVitalesModel.countDocuments({
+      // 1. Preparar filtro base
+      const baseFilter = { deletedAt: null };
+
+      // 2. Obtener pacientes del centro si se especifica
+      let pacientesFilter: any = { deletedAt: null };
+      if (centroId) {
+        const usuariosCentro = await UsuariosModel.find({
+          id_centro_gerontologico: new mongoose.Types.ObjectId(centroId),
           deletedAt: null,
-        });
+        })
+          .select("_id")
+          .lean();
 
-      const count_referentes_hoy =
-        await ReferenciaSignosVitalesModel.countDocuments({
-          deletedAt: null,
-          createdAt: { $gte: hoy }, // Filtrar por la fecha de hoy
-        });
+        pacientesFilter.id_usuario = {
+          $in: usuariosCentro.map((u) => u._id),
+        };
+      }
 
-      const referencias = await ReferenciaSignosVitalesModel.find({
-        deletedAt: null,
-      }).select("id_paciente");
+      // 3. Contar referencias (totales y de hoy)
+      const [count_referentes, count_referentes_hoy] = await Promise.all([
+        ReferenciaSignosVitalesModel.countDocuments(baseFilter),
+        ReferenciaSignosVitalesModel.countDocuments({
+          ...baseFilter,
+          createdAt: { $gte: hoy },
+        }),
+      ]);
 
-      const totalPacientes = await PacientesModel.countDocuments({
-        deletedAt: null,
-      });
+      // 4. Obtener IDs de pacientes con referencia
+      const referencias = await ReferenciaSignosVitalesModel.find(baseFilter)
+        .select("id_paciente")
+        .lean();
 
+      // 5. Contar pacientes totales (filtrados por centro si aplica)
+      const totalPacientes = await PacientesModel.countDocuments(
+        pacientesFilter
+      );
+
+      // 6. Calcular pacientes sin referencia
       const pacientesConReferencia = new Set(
         referencias.map((ref) => ref.id_paciente.toString())
       );
 
-      const count_sin_referentes = totalPacientes - pacientesConReferencia.size;
+      // Si hay filtro por centro, necesitamos verificar qué pacientes con referencia pertenecen al centro
+      let count_sin_referentes;
+      if (centroId) {
+        const pacientesCentroConReferencia =
+          await PacientesModel.countDocuments({
+            ...pacientesFilter,
+            _id: {
+              $in: Array.from(pacientesConReferencia).map(
+                (id) => new mongoose.Types.ObjectId(id)
+              ),
+            },
+          });
+        count_sin_referentes = totalPacientes - pacientesCentroConReferencia;
+      } else {
+        count_sin_referentes = totalPacientes - pacientesConReferencia.size;
+      }
 
-      const combinedObject = {
+      return new CountResultReferenciaSignosV(
         count_referentes,
         count_referentes_hoy,
-        count_sin_referentes,
-      };
-
-      return ReferenciaSignosVMapper.referenteCountEntityFromObject(
-        combinedObject
+        count_sin_referentes
       );
     } catch (error) {
-      console.error("Error al obtener el resumen de referencias de SV:", error);
-      throw error;
+      console.error("Error al obtener el resumen de referencias:", error);
+      throw CustomError.internalServer();
     }
   }
 }

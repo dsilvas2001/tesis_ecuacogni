@@ -9,6 +9,7 @@ import { SignosVitalesRoutes } from "./signos-vitales/signos-vitales.routes";
 import { EjercicioPacienteRoutes } from "./ejercicio-paciente/ejercicio-paciente.routes";
 import { EjercicioGeneradoRoutes } from "./ejercicio-generado/ejercicio-generado.routes";
 import { EjercicioResultadosRoutes } from "./ejercicio-resultado/ejercicio-resultado.routes";
+import { CentroRoutes } from "./centro-gerontologico/centro-gerontologico.routes";
 
 export class AppRoutes {
   static get routes(): Router {
@@ -23,6 +24,7 @@ export class AppRoutes {
     router.use("/ejercicioP", EjercicioPacienteRoutes.routes);
     router.use("/GenerateEjercicio", EjercicioGeneradoRoutes.routes);
     router.use("/ejercicioResultado", EjercicioResultadosRoutes.routes);
+    router.use("/centro", CentroRoutes.routes);
     //
 
     return router;

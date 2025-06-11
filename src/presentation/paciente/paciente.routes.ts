@@ -16,8 +16,9 @@ export class PacienteRoutes {
 
     router.post("/register", controller.registerPaciente);
 
-    router.get("/", controller.getAllPaciente);
-    router.get("/count", controller.countAllPaciente);
+    router.get("/:centroId", controller.getAllPaciente);
+
+    router.get("/count/:centroId", controller.countAllPaciente);
 
     router.put("/update/:id", controller.updatePaciente);
     router.put("/delete/:id", controller.deletePaciente);

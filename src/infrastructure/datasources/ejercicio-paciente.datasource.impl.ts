@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   EjercicioModel,
   PacienteEjerciciosModel,
@@ -24,7 +25,8 @@ export class EjercicioPacienteDatasourceImpl
 
   async findAll(
     fechaSeleccionada: string,
-    estadoEjercicio: "completo" | "incompleto" | "pendiente" | "todos"
+    estadoEjercicio: "completo" | "incompleto" | "pendiente" | "todos",
+    centroId: string
   ): Promise<any[]> {
     try {
       const fechaBusqueda = fechaSeleccionada
@@ -38,16 +40,35 @@ export class EjercicioPacienteDatasourceImpl
       const fechaFin = new Date(fechaInicio);
       fechaFin.setHours(23, 59, 59, 999);
 
-      // 1. Buscar signos vitales (igual que antes)
-      const signosVitales = await SignosVitalesModel.find({
+      // 1. Construir filtro base para pacientes del centro
+      const pacienteFilter: any = {};
+      if (centroId) {
+        const usuariosCentro = await UsuariosModel.find({
+          id_centro_gerontologico: new mongoose.Types.ObjectId(centroId),
+          deletedAt: null,
+        }).distinct("_id");
+
+        pacienteFilter.id_usuario = { $in: usuariosCentro };
+      }
+
+      // 2. Obtener IDs de pacientes del centro (si aplica)
+      const pacientesDelCentro = centroId
+        ? await PacientesModel.find(pacienteFilter).distinct("_id")
+        : null;
+
+      // 3. Buscar signos vitales (filtrados por centro si aplica)
+      const signosVitalesFilter: any = {
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
         deletedAt: null,
         "analisis_ia.statusSV": "estable",
-      })
+        ...(centroId && { id_paciente: { $in: pacientesDelCentro } }),
+      };
+
+      const signosVitales = await SignosVitalesModel.find(signosVitalesFilter)
         .populate({
           path: "id_paciente",
           model: PacientesModel,
-          select: "id_usuario",
+          select: "id_usuario edad",
           populate: {
             path: "id_usuario",
             model: UsuariosModel,
@@ -60,50 +81,62 @@ export class EjercicioPacienteDatasourceImpl
         (signo) => signo.id_paciente._id
       );
 
-      // 2. Buscar RESULTADOS de ejercicios (nuevo)
-      const resultadosEjercicios = await EjercicioResultadosModel.find({
+      // 4. Buscar RESULTADOS de ejercicios (filtrados por centro si aplica)
+      const resultadosEjerciciosFilter: any = {
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
         "paciente.id_paciente": {
           $in: pacientesEstables.map((id) => id.toString()),
         },
-      }).exec();
+        ...(centroId && {
+          "paciente.id_paciente": {
+            $in: pacientesDelCentro?.map((id) => id.toString()),
+          },
+        }),
+      };
 
-      // 3. Mapear resultados (conservando tu estructura original)
-      const resultados = pacientesEstables.map((idPaciente) => {
-        const paciente = signosVitales.find(
-          (signo) => signo.id_paciente._id.toString() === idPaciente.toString()
-        )?.id_paciente;
+      const resultadosEjercicios = await EjercicioResultadosModel.find(
+        resultadosEjerciciosFilter
+      ).exec();
 
-        // Verificar si tiene resultados
+      // 5. Mapear resultados
+      const resultados = signosVitales.map((signoVital) => {
+        const idPaciente = signoVital.id_paciente._id.toString();
+        const paciente: any =
+          signoVital.id_paciente && typeof signoVital.id_paciente === "object"
+            ? signoVital.id_paciente
+            : null;
+
         const tieneResultados = resultadosEjercicios.some(
-          (res) => res.paciente!.id_paciente === idPaciente.toString()
+          (res) => res.paciente!.id_paciente === idPaciente
         );
 
-        let estado;
-        let descripcion;
-
-        if (tieneResultados) {
-          estado = "completo";
-          descripcion = "Se realizó correctamente el ejercicio";
-        } else {
-          estado = "pendiente";
-          descripcion = "Falta de realizar el ejercicio o asignar";
-        }
+        const estado = tieneResultados ? "completo" : "pendiente";
+        const descripcion = tieneResultados
+          ? "Se realizó correctamente el ejercicio"
+          : "Falta de realizar el ejercicio o asignar";
 
         return {
-          id_paciente: paciente!._id.toString(),
-          nombre: (paciente as any).id_usuario.nombre,
-          apellido: (paciente as any).id_usuario.apellido,
+          id_paciente: idPaciente,
+          nombre:
+            paciente && paciente.id_usuario && paciente.id_usuario.nombre
+              ? paciente.id_usuario.nombre
+              : "",
+          apellido:
+            paciente && paciente.id_usuario && paciente.id_usuario.apellido
+              ? paciente.id_usuario.apellido
+              : "",
+          edad: paciente && paciente.edad ? paciente.edad : "",
           estado,
           date: {
             fecha: fechaInicio.toLocaleDateString(),
             hora: new Date().toLocaleTimeString(),
           },
           descripcion,
+          ...(centroId && { centroId }), // Opcional: incluir centro en respuesta
         };
       });
 
-      // Filtrar por estado (igual que antes)
+      // Filtrar por estado
       if (estadoEjercicio && estadoEjercicio !== "todos") {
         return resultados.filter(
           (resultado) => resultado.estado === estadoEjercicio
@@ -117,7 +150,7 @@ export class EjercicioPacienteDatasourceImpl
     }
   }
 
-  async countAll(): Promise<any> {
+  async countAll(centroId: string): Promise<any> {
     try {
       const fechaBusqueda = new Date();
       const fechaInicio = new Date(
@@ -128,26 +161,59 @@ export class EjercicioPacienteDatasourceImpl
       const fechaFin = new Date(fechaInicio);
       fechaFin.setHours(23, 59, 59, 999);
 
-      // 1. Buscar pacientes estables
-      const signosVitales = await SignosVitalesModel.find({
+      // 1. Construir filtro base para pacientes del centro
+      const pacienteFilter: any = {};
+      if (centroId) {
+        const usuariosCentro = await UsuariosModel.find({
+          id_centro_gerontologico: new mongoose.Types.ObjectId(centroId),
+          deletedAt: null,
+        }).distinct("_id");
+
+        pacienteFilter.id_usuario = { $in: usuariosCentro };
+      }
+
+      // 2. Obtener IDs de pacientes del centro (si aplica)
+      const pacientesDelCentro = centroId
+        ? await PacientesModel.find(pacienteFilter).distinct("_id")
+        : null;
+
+      // 3. Buscar pacientes estables (filtrados por centro si aplica)
+      const signosVitalesFilter: any = {
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
         deletedAt: null,
         "analisis_ia.statusSV": "estable",
-      }).exec();
+        ...(centroId && { id_paciente: { $in: pacientesDelCentro } }),
+      };
+
+      const signosVitales = await SignosVitalesModel.find(signosVitalesFilter)
+        .populate({
+          path: "id_paciente",
+          select: "_id",
+        })
+        .exec();
 
       const pacientesEstablesIds = signosVitales.map(
         (signo) => signo.id_paciente._id
       );
 
-      // 2. Buscar qué pacientes completaron ejercicios hoy
-      const resultados = await EjercicioResultadosModel.find({
+      // 4. Buscar qué pacientes completaron ejercicios hoy (filtrados por centro si aplica)
+      const resultadosFilter: any = {
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
         "paciente.id_paciente": {
           $in: pacientesEstablesIds.map((id) => id.toString()),
         },
-      }).exec();
+        ...(centroId && {
+          "paciente.id_paciente": {
+            $in: pacientesDelCentro?.map((id) => id.toString()),
+          },
+        }),
+      };
 
-      // 3. Calcular métricas
+      const resultados = await EjercicioResultadosModel.find(
+        resultadosFilter
+      ).exec();
+
+      // 5. Calcular métricas
       const pacientesCompletados = [
         ...new Set(resultados.map((res) => res.paciente!.id_paciente)),
       ].length;
@@ -156,8 +222,9 @@ export class EjercicioPacienteDatasourceImpl
 
       return {
         pacientesEstables: pacientesEstablesIds.length,
-        pacientesCompletados, // Pacientes con ejercicios registrados hoy
-        pacientesPendientes, // Pacientes sin ejercicios registrados hoy
+        pacientesCompletados,
+        pacientesPendientes,
+        ...(centroId && { centroId }), // Opcional: incluir el centroId en la respuesta
       };
     } catch (error) {
       console.error("Error al contar los ejercicios:", error);

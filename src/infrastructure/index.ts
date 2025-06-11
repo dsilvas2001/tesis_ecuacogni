@@ -30,6 +30,7 @@ export * from "./repositories/referencias-signosv.repository.impl";
 export * from "./repositories/signos-vitales.repository.impl";
 export * from "./repositories/ejercicio-generado.repository.impl";
 export * from "./repositories/ejercicio-resultado.repository.impl";
+export * from "./repositories/centro-gerontologico.repository.impl";
 
 // security
 export * from "./security/bcrypt.security";

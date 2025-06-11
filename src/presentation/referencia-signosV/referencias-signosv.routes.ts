@@ -18,10 +18,10 @@ export class ReferenciaSignosVRoutes {
 
     router.post("/register", controller.registerReferenciaSignosV);
     router.put("/update/:id", controller.updateReferenciaSignosV);
-    router.get("/", controller.getAllReferenciaSignosV);
-    router.get("/notreferencia/", controller.getNotReferenciaSignosV);
+    router.get("/:centroId", controller.getAllReferenciaSignosV);
+    router.get("/notreferencia/:centroId", controller.getNotReferenciaSignosV);
 
-    router.get("/count/", controller.getCountReferenciaSignosV);
+    router.get("/count/:centroId", controller.getCountReferenciaSignosV);
 
     router.put("/delete/:id", controller.deleteReferenciaSignosV);
 

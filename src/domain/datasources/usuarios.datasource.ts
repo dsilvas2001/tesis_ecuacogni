@@ -11,7 +11,7 @@ export abstract class UsuarioDatasource {
     password: string
   ): Promise<UserEntity>;
 
-  abstract countAllHOME(): Promise<any>;
+  abstract countAllHOME(centroId: string): Promise<any>;
 
   // abstract update(userId: string, userUpdateDto: UserDto): Promise<UserEntity>;
   // abstract findById(userId: string): Promise<UserEntity>;

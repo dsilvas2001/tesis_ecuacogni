@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import {
   PacientesModel,
   ReferenciaSignosVitalesModel,
@@ -277,7 +277,8 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
 
   async findAll(
     fechaSeleccionada: string,
-    statusSV: "emergencia" | "estable" | "pendiente" | "todos"
+    statusSV: "emergencia" | "estable" | "pendiente" | "todos",
+    centroId: string
   ): Promise<SignosVitalesEntity[]> {
     try {
       const fechaBusqueda = fechaSeleccionada
@@ -291,16 +292,28 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
       const fechaFin = new Date(fechaInicio);
       fechaFin.setHours(23, 59, 59, 999);
 
-      const filtro: any = {
-        createdAt: { $gte: fechaInicio, $lte: fechaFin },
+      // 1. Primero obtenemos los IDs de usuarios que pertenecen al centro
+      const usuariosDelCentro = await UsuariosModel.find({
+        id_centro_gerontologico: new mongoose.Types.ObjectId(centroId),
         deletedAt: null,
-      };
+      }).distinct("_id");
 
-      const signosV = await SignosVitalesModel.find(filtro)
+      // 2. Obtenemos los pacientes asociados a esos usuarios
+      const pacientesDelCentro = await PacientesModel.find({
+        id_usuario: { $in: usuariosDelCentro },
+        deletedAt: null,
+      }).distinct("_id");
+
+      // 3. Consulta de signos vitales solo para pacientes del centro
+      const signosV = await SignosVitalesModel.find({
+        createdAt: { $gte: fechaInicio, $lte: fechaFin },
+        id_paciente: { $in: pacientesDelCentro },
+        deletedAt: null,
+      })
         .populate({
           path: "id_paciente",
           model: PacientesModel,
-          select: "id_usuario",
+          select: "id_usuario edad",
           populate: {
             path: "id_usuario",
             model: UsuariosModel,
@@ -309,11 +322,15 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
         })
         .exec();
 
-      const pacientesConReferencias = await ReferenciaSignosVitalesModel.find({
-        deletedAt: null,
-      }).distinct("id_paciente");
+      // 4. Obtenemos pacientes con referencia que pertenecen al centro
+      const pacientesConReferencias =
+        await ReferenciaSignosVitalesModel.distinct("id_paciente", {
+          id_paciente: { $in: pacientesDelCentro },
+          deletedAt: null,
+        });
 
-      const todosLosPacientes = await PacientesModel.find({
+      // 5. Obtenemos información completa de los pacientes del centro
+      const pacientesDelCentroCompleto = await PacientesModel.find({
         _id: { $in: pacientesConReferencias },
         deletedAt: null,
       })
@@ -324,31 +341,26 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
         })
         .exec();
 
-      const resultados = todosLosPacientes.map((paciente) => {
-        const signosHoy = signosV.find((sv) => {
-          return sv.id_paciente._id.toString() === paciente._id.toString();
-        });
+      // 6. Procesamos los resultados
+      const resultados = pacientesDelCentroCompleto.map((paciente) => {
+        const signosHoy = signosV.find(
+          (sv) => sv.id_paciente._id.toString() === paciente._id.toString()
+        );
 
-        let status;
-        let descripcion: string;
-
-        if (signosHoy) {
-          status = signosHoy.analisis_ia!.statusSV;
-          descripcion =
-            status === "emergencia"
-              ? "Signos vitales fuera de rango, evitar hacer ejercicio"
-              : status === "estable"
-              ? "Signos vitales normales, puede hacer ejercicio"
-              : "Necesita revisión de signos vitales";
-        } else {
-          status = "pendiente";
-          descripcion = "No se encontraron signos vitales para hoy";
-        }
+        // Asegurarse de que id_usuario está poblado
+        const usuario = (paciente.id_usuario as any) || {};
+        let status = signosHoy?.analisis_ia?.statusSV || "pendiente";
+        let descripcion =
+          status === "emergencia"
+            ? "Signos vitales fuera de rango, evitar hacer ejercicio"
+            : status === "estable"
+            ? "Signos vitales normales, puede hacer ejercicio"
+            : "No se encontraron signos vitales para hoy";
 
         return {
           id_paciente: paciente._id.toString(),
-          nombre: (paciente.id_usuario as any).nombre,
-          apellido: (paciente.id_usuario as any).apellido,
+          nombre: usuario.nombre || "",
+          apellido: usuario.apellido || "",
           edad: paciente.edad,
           date: signosHoy
             ? {
@@ -364,15 +376,10 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
         };
       });
 
-      if (statusSV && statusSV !== "todos") {
-        const filtrados = resultados.filter(
-          (resultado) => resultado.status === statusSV
-        );
-        console.log("Filtrados por estado:", filtrados);
-        return filtrados;
-      }
-
-      return resultados;
+      // Filtramos por estado si es necesario
+      return statusSV && statusSV !== "todos"
+        ? resultados.filter((r) => r.status === statusSV)
+        : resultados;
     } catch (error) {
       console.error("Error al buscar los signos vitales:", error);
       throw error;
@@ -384,25 +391,29 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
     fecha: string
   ): Promise<any> {
     try {
-      // Convertir la fecha proporcionada a un objeto Date
+      console.log("id_paciente:", id_paciente);
 
+      // 2. Convertir y validar la fecha
       const fechaSeleccionada = new Date(fecha);
+      if (isNaN(fechaSeleccionada.getTime())) {
+        throw CustomError.badRequest("Fecha no válida");
+      }
 
-      // Calcular el inicio y el final del día de la fecha seleccionada
+      // 3. Calcular rango de fechas
       const inicioDia = new Date(
         fechaSeleccionada.getFullYear(),
         fechaSeleccionada.getMonth(),
         fechaSeleccionada.getDate()
       );
-      const finDia = new Date(
-        fechaSeleccionada.getFullYear(),
-        fechaSeleccionada.getMonth(),
-        fechaSeleccionada.getDate() + 1
-      );
+      const finDia = new Date(inicioDia);
+      finDia.setDate(inicioDia.getDate() + 1);
+      //
+      console.log("Rango de fechas:", inicioDia, finDia);
+      console.log("id_paciente:", id_paciente);
 
-      // Buscar signos vitales del paciente en el rango de fechas y que no estén eliminados
+      // 4. Buscar signos vitales con validación de ObjectId
       const signosVitales = await SignosVitalesModel.find({
-        id_paciente,
+        id_paciente: new mongoose.Types.ObjectId(id_paciente), // Conversión explícita
         createdAt: { $gte: inicioDia, $lt: finDia },
         deletedAt: null,
       })
@@ -418,29 +429,34 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
         })
         .exec();
 
-      // Si no se encuentran registros, se lanza un error
+      console.log("Signos vitales encontrados:", signosVitales);
+
       if (signosVitales.length === 0) {
         throw CustomError.badRequest(
           "No se encontraron signos vitales para el paciente en la fecha proporcionada."
         );
       }
 
-      // Mapear los resultados para devolver la información deseada
-      const resultados = signosVitales.map((signoVital) => {
-        const paciente = signoVital.id_paciente as any;
-        const usuario = paciente.id_usuario;
+      // 5. Mapear resultados
+      return signosVitales.map((signoVital) => {
+        const paciente = signoVital.id_paciente as unknown as {
+          _id: mongoose.Types.ObjectId;
+          id_usuario: { nombre: string; apellido: string };
+          edad: number;
+          genero: string;
+        };
 
         return {
           id_paciente: paciente._id.toString(),
-          nombre: usuario.nombre,
-          apellido: usuario.apellido,
+          nombre: paciente.id_usuario.nombre,
+          apellido: paciente.id_usuario.apellido,
           edad: paciente.edad,
           genero: paciente.genero,
           fecha: signoVital.createdAt.toLocaleDateString(),
           hora: signoVital.createdAt.toLocaleTimeString(),
           presion_arterial: {
-            sistolica: signoVital.presion_arterial!.sistolica,
-            diastolica: signoVital.presion_arterial!.diastolica,
+            sistolica: signoVital.presion_arterial?.sistolica,
+            diastolica: signoVital.presion_arterial?.diastolica,
           },
           frecuencia_cardiaca: signoVital.frecuencia_cardiaca,
           frecuencia_respiratoria: signoVital.frecuencia_respiratoria,
@@ -458,12 +474,11 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
           },
         };
       });
-
-      return resultados;
     } catch (error) {
       if (error instanceof CustomError) {
         throw error;
       }
+      console.error("Error en findByPacienteAndFecha:", error);
       throw CustomError.internalServer();
     }
   }
@@ -505,12 +520,12 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
 
   //COUNT
 
-  async countAll(fechaString: string): Promise<CountResultSignosV> {
+  async countAll(
+    fechaString: string,
+    centroId: string
+  ): Promise<CountResultSignosV> {
     try {
-      // Convertir la fecha string a un objeto Date
       const fechaBusqueda = new Date(fechaString);
-
-      // Definir el inicio del día
       const fechaInicio = new Date(
         fechaBusqueda.getFullYear(),
         fechaBusqueda.getMonth(),
@@ -520,8 +535,6 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
         0,
         0
       );
-
-      // Definir el final del día
       const fechaFin = new Date(
         fechaBusqueda.getFullYear(),
         fechaBusqueda.getMonth(),
@@ -532,58 +545,82 @@ export class SignosVitalesDatasourceImpl implements SignosVitalesDatasource {
         999
       );
 
-      // 1. Pacientes Agregados (total)
-      const count_pacientes_hoy = await PacientesModel.countDocuments({
-        deletedAt: null,
-      });
+      // Filtro base para pacientes
+      const pacienteFilter: any = { deletedAt: null };
 
-      // 2. Signos Vitales (en la fecha específica)
-      const count_signos_vitales_hoy = await SignosVitalesModel.countDocuments({
-        createdAt: { $gte: fechaInicio, $lte: fechaFin },
-        deletedAt: null,
-      });
-
-      // 3. Emergencia (en la fecha específica) (statusSV = "emergencia")
-      const count_emergencia_hoy = await SignosVitalesModel.countDocuments({
-        createdAt: { $gte: fechaInicio, $lte: fechaFin }, // <-- Cambio aquí
-        "analisis_ia.statusSV": "emergencia",
-        deletedAt: null,
-      });
-
-      // 4. Pacientes con referencia pero sin registros de signos vitales en la fecha específica
-      const pacientesConReferencia =
-        await ReferenciaSignosVitalesModel.distinct("id_paciente", {
+      // Si se proporciona centroId, filtrar pacientes de ese centro
+      if (centroId) {
+        const usuariosCentro = await UsuariosModel.find({
+          id_centro_gerontologico: new mongoose.Types.ObjectId(centroId),
           deletedAt: null,
-        });
+        }).distinct("_id");
 
-      const pacientesConSignosVitalesHoy = await SignosVitalesModel.distinct(
-        "id_paciente",
-        {
-          createdAt: { $gte: fechaInicio, $lte: fechaFin }, // <-- Cambio aquí
+        pacienteFilter.id_usuario = { $in: usuariosCentro };
+      }
+
+      // Obtener IDs de pacientes filtrados (para optimizar consultas)
+      const pacientesFiltrados = await PacientesModel.find(
+        pacienteFilter
+      ).distinct("_id");
+
+      // Consultas en paralelo
+      const [
+        count_pacientes_hoy,
+        count_signos_vitales_hoy,
+        count_emergencia_hoy,
+        pacientesConReferencia,
+        pacientesConSignosVitalesHoy,
+      ] = await Promise.all([
+        // 1. Total pacientes (filtrados por centro si aplica)
+        PacientesModel.countDocuments(pacienteFilter),
+
+        // 2. Signos vitales del día (filtrados por centro si aplica)
+        SignosVitalesModel.countDocuments({
+          createdAt: { $gte: fechaInicio, $lte: fechaFin },
           deletedAt: null,
-        }
-      );
+          ...(centroId && { id_paciente: { $in: pacientesFiltrados } }),
+        }),
 
+        // 3. Emergencias del día (filtradas por centro si aplica)
+        SignosVitalesModel.countDocuments({
+          createdAt: { $gte: fechaInicio, $lte: fechaFin },
+          "analisis_ia.statusSV": "emergencia",
+          deletedAt: null,
+          ...(centroId && { id_paciente: { $in: pacientesFiltrados } }),
+        }),
+
+        // 4. Pacientes con referencia (filtrados por centro si aplica)
+        ReferenciaSignosVitalesModel.distinct("id_paciente", {
+          deletedAt: null,
+          ...(centroId && { id_paciente: { $in: pacientesFiltrados } }),
+        }),
+
+        // 5. Pacientes con signos vitales hoy (filtrados por centro si aplica)
+        SignosVitalesModel.distinct("id_paciente", {
+          createdAt: { $gte: fechaInicio, $lte: fechaFin },
+          deletedAt: null,
+          ...(centroId && { id_paciente: { $in: pacientesFiltrados } }),
+        }),
+      ]);
+
+      // 6. Pacientes con referencia pero sin registros hoy
       const count_sin_registrar = await PacientesModel.countDocuments({
         _id: {
           $in: pacientesConReferencia,
           $nin: pacientesConSignosVitalesHoy,
         },
-        deletedAt: null,
+        ...pacienteFilter,
       });
 
-      // Combinar los resultados en un objeto
-      const combinedObject = {
+      return {
         count_pacientes_hoy,
         count_signos_vitales_hoy,
         count_emergencia_hoy,
         count_sin_registrar,
       };
-
-      return combinedObject;
     } catch (error) {
-      console.error("Error al obtener el resumen de referencias de SV:", error);
-      throw error;
+      console.error("Error al obtener el resumen:", error);
+      throw CustomError.internalServer();
     }
   }
 

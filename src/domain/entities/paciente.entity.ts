@@ -8,7 +8,8 @@ export class PacienteEntity {
     public roles?: string,
     public signos_vitales?: string,
     public referenciaSV?: string,
-    public status?: string
+    public status?: string,
+    public id_centro_gerontologico?: string
   ) {}
 }
 export class CountResultPaciente {

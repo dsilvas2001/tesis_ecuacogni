@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   MedicosModel,
   PacienteEjerciciosModel,
@@ -6,6 +7,8 @@ import {
   SignosVitalesModel,
   UsuariosModel,
 } from "../../data/mongodb/models";
+import { CentroGerontologicoModel } from "../../data/mongodb/models/centro-gerontologico.model";
+import { EjercicioResultadosModel } from "../../data/mongodb/models/ejercicio-resultado.model";
 import { UserDto, UserEntity, UsuarioDatasource } from "../../domain";
 import { CustomError } from "../errors/custom.error";
 import { UsuarioMapper } from "../mappers/usuarios.mapper";
@@ -73,41 +76,66 @@ export class UsuarioDatasourceImpl implements UsuarioDatasource {
       const user = await UsuariosModel.findOne({ email });
 
       if (!user) {
-        throw CustomError.badRequest("Invalid credentials");
+        throw CustomError.badRequest("Credenciales inválidas");
       }
 
-      const role = await RolesModel.findById(user.id_rol);
-      console.log("role");
-      console.log("role");
-      console.log(role);
-
-      // Comparar la contraseña proporcionada con la almacenada
+      // Comparar la contraseña
       const isPasswordValid = this.comparePassword(password, user.password);
-
       if (!isPasswordValid) {
-        throw CustomError.badRequest("Invalid credentials");
+        throw CustomError.badRequest("Credenciales inválidas");
       }
 
+      // Obtener información adicional en paralelo
+      const [role, centro] = await Promise.all([
+        RolesModel.findById(user.id_rol),
+        user.id_centro_gerontologico
+          ? CentroGerontologicoModel.findById(user.id_centro_gerontologico)
+          : Promise.resolve(null),
+      ]);
+
+      if (!role) {
+        throw CustomError.internalServer("Rol no encontrado");
+      }
+      console.log("user");
+      console.log("user");
+      console.log(user);
+
+      // Construir el objeto combinado
       const combinedObject = {
-        ...user.toObject(), // Convierte el documento de Mongoose en un objeto JavaScript
-        ...role!.toObject(), // Convierte el segundo documento en un objeto JavaScript
+        ...user.toObject(),
+        rolName: role.rolName, // Solo el nombre del rol
+        tiene_centro_asignado: !!user.id_centro_gerontologico,
+        centro_info: centro
+          ? {
+              id: centro._id,
+              nombre: centro.nombre,
+              direccion: centro.direccion,
+              codigo_unico: centro.codigo_unico,
+            }
+          : null,
       };
+
+      // Asegurar los IDs correctos
+      combinedObject._id = user._id;
+      combinedObject.id_rol = user.id_rol;
+
+      return UsuarioMapper.userAuthEntityFromObject(combinedObject);
+      console.log("combinedObject");
       console.log("combinedObject");
       console.log("combinedObject");
       console.log(combinedObject);
 
-      // Si las credenciales son válidas, devolver el usuario
       return UsuarioMapper.userAuthEntityFromObject(combinedObject);
     } catch (error) {
       if (error instanceof CustomError) {
         throw error;
-      } else {
-        throw CustomError.internalServer();
       }
+      console.error("Error en findByCredentials:", error);
+      throw CustomError.internalServer();
     }
   }
 
-  async countAllHOME(): Promise<any> {
+  async countAllHOME(centroId: string): Promise<any> {
     try {
       const fechaBusqueda = new Date();
       const fechaInicio = new Date(
@@ -118,41 +146,51 @@ export class UsuarioDatasourceImpl implements UsuarioDatasource {
       const fechaFin = new Date(fechaInicio);
       fechaFin.setHours(23, 59, 59, 999);
 
-      // Contar pacientes agregados (total en la base de datos)
-      const totalPacientes = await PacientesModel.countDocuments({
+      // 1. Obtener los usuarios del centro
+      const usuariosCentro = await UsuariosModel.find({
+        id_centro_gerontologico: new mongoose.Types.ObjectId(centroId),
         deletedAt: null,
-      });
+      }).distinct("_id");
 
-      // Filtro para contar signos vitales registrados hoy
+      // 2. Obtener los pacientes del centro
+      const pacientesDelCentro = await PacientesModel.find({
+        id_usuario: { $in: usuariosCentro },
+        deletedAt: null,
+      }).distinct("_id");
+
+      // 3. Contar pacientes del centro
+      const totalPacientes = pacientesDelCentro.length;
+
+      // 4. Filtros para conteos
       const filtroSignosVitalesHoy: any = {
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
+        id_paciente: { $in: pacientesDelCentro },
         deletedAt: null,
       };
 
-      // Contar signos vitales registrados hoy
-      const signosVitalesHoy = await SignosVitalesModel.countDocuments(
-        filtroSignosVitalesHoy
-      );
-
-      // Filtro para contar ejercicios generados hoy
       const filtroEjerciciosHoy: any = {
         createdAt: { $gte: fechaInicio, $lte: fechaFin },
+        "paciente.id_paciente": {
+          $in: pacientesDelCentro.map((id) => id.toString()),
+        },
         deletedAt: null,
       };
 
-      // Contar ejercicios generados hoy
-      const ejerciciosHoy = await PacienteEjerciciosModel.countDocuments(
-        filtroEjerciciosHoy
-      );
+      // 5. Ejecutar conteos en paralelo
+      const [signosVitalesHoy, ejerciciosHoy] = await Promise.all([
+        SignosVitalesModel.countDocuments(filtroSignosVitalesHoy),
+        EjercicioResultadosModel.countDocuments(filtroEjerciciosHoy),
+      ]);
 
       return {
-        totalPacientes, // Total de pacientes en la base de datos
-        signosVitalesHoy, // Signos vitales registrados hoy
-        ejerciciosHoy, // Ejercicios generados hoy
+        totalPacientes, // Total de pacientes en el centro
+        signosVitalesHoy, // Signos vitales registrados hoy en el centro
+        ejerciciosHoy, // Ejercicios generados hoy en el centro
+        centroId, // Opcional: incluir el ID del centro en la respuesta
       };
     } catch (error) {
       console.error("Error al contar los registros:", error);
-      throw error;
+      throw CustomError.internalServer();
     }
   }
 }
