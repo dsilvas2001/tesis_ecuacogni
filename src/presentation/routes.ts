@@ -10,6 +10,7 @@ import { EjercicioPacienteRoutes } from "./ejercicio-paciente/ejercicio-paciente
 import { EjercicioGeneradoRoutes } from "./ejercicio-generado/ejercicio-generado.routes";
 import { EjercicioResultadosRoutes } from "./ejercicio-resultado/ejercicio-resultado.routes";
 import { CentroRoutes } from "./centro-gerontologico/centro-gerontologico.routes";
+import { CuidadorRoutes } from "./cuidador/cuidador.routes";
 
 export class AppRoutes {
   static get routes(): Router {
@@ -25,8 +26,7 @@ export class AppRoutes {
     router.use("/GenerateEjercicio", EjercicioGeneradoRoutes.routes);
     router.use("/ejercicioResultado", EjercicioResultadosRoutes.routes);
     router.use("/centro", CentroRoutes.routes);
-    //
-
+    router.use("/cuidador", CuidadorRoutes.routes);
     return router;
   }
 }

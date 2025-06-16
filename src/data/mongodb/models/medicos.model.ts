@@ -11,6 +11,10 @@ const medicosSchema = new Schema(
       type: Number,
       required: [true, "Experiencia del Medico es requerido"],
     },
+    aprobado: {
+      type: Boolean,
+      default: false,
+    },
     deletedAt: {
       type: Date,
       default: null,

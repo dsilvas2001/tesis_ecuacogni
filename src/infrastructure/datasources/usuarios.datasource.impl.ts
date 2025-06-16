@@ -67,43 +67,118 @@ export class UsuarioDatasourceImpl implements UsuarioDatasource {
     }
   }
 
+  // async findByCredentials(
+  //   email: string,
+  //   password: string
+  // ): Promise<UserEntity> {
+  //   try {
+  //     // Buscar al usuario por el correo electrónico
+  //     const user = await UsuariosModel.findOne({ email });
+
+  //     if (!user) {
+  //       throw CustomError.badRequest("Credenciales inválidas");
+  //     }
+
+  //     // Comparar la contraseña
+  //     const isPasswordValid = this.comparePassword(password, user.password);
+  //     if (!isPasswordValid) {
+  //       throw CustomError.badRequest("Credenciales inválidas");
+  //     }
+
+  //     // Obtener información adicional en paralelo
+  //     const [role, centro] = await Promise.all([
+  //       RolesModel.findById(user.id_rol),
+  //       user.id_centro_gerontologico
+  //         ? CentroGerontologicoModel.findById(user.id_centro_gerontologico)
+  //         : Promise.resolve(null),
+  //     ]);
+
+  //     if (!role) {
+  //       throw CustomError.internalServer("Rol no encontrado");
+  //     }
+  //     console.log("user");
+  //     console.log("user");
+  //     console.log(user);
+
+  //     // Construir el objeto combinado
+  //     const combinedObject = {
+  //       ...user.toObject(),
+  //       rolName: role.rolName, // Solo el nombre del rol
+  //       tiene_centro_asignado: !!user.id_centro_gerontologico,
+  //       centro_info: centro
+  //         ? {
+  //             id: centro._id,
+  //             nombre: centro.nombre,
+  //             direccion: centro.direccion,
+  //             codigo_unico: centro.codigo_unico,
+  //           }
+  //         : null,
+  //     };
+
+  //     // Asegurar los IDs correctos
+  //     combinedObject._id = user._id;
+  //     combinedObject.id_rol = user.id_rol;
+
+  //     return UsuarioMapper.userAuthEntityFromObject(combinedObject);
+  //     console.log("combinedObject");
+  //     console.log("combinedObject");
+  //     console.log("combinedObject");
+  //     console.log(combinedObject);
+
+  //     return UsuarioMapper.userAuthEntityFromObject(combinedObject);
+  //   } catch (error) {
+  //     if (error instanceof CustomError) {
+  //       throw error;
+  //     }
+  //     console.error("Error en findByCredentials:", error);
+  //     throw CustomError.internalServer();
+  //   }
+  // }
+
   async findByCredentials(
     email: string,
     password: string
   ): Promise<UserEntity> {
     try {
-      // Buscar al usuario por el correo electrónico
+      // 1. Buscar usuario
       const user = await UsuariosModel.findOne({ email });
+      if (!user) throw CustomError.badRequest("Credenciales inválidas");
 
-      if (!user) {
+      // 2. Verificar contraseña
+      if (!this.comparePassword(password, user.password)) {
         throw CustomError.badRequest("Credenciales inválidas");
       }
 
-      // Comparar la contraseña
-      const isPasswordValid = this.comparePassword(password, user.password);
-      if (!isPasswordValid) {
-        throw CustomError.badRequest("Credenciales inválidas");
-      }
-
-      // Obtener información adicional en paralelo
-      const [role, centro] = await Promise.all([
+      // 3. Obtener datos adicionales
+      const [role, centro, cuidadorData] = await Promise.all([
         RolesModel.findById(user.id_rol),
         user.id_centro_gerontologico
           ? CentroGerontologicoModel.findById(user.id_centro_gerontologico)
           : Promise.resolve(null),
+        MedicosModel.findOne({ id_usuario: user._id }),
       ]);
 
-      if (!role) {
-        throw CustomError.internalServer("Rol no encontrado");
-      }
-      console.log("user");
-      console.log("user");
-      console.log(user);
+      if (!role) throw CustomError.internalServer("Rol no encontrado");
 
-      // Construir el objeto combinado
-      const combinedObject = {
+      // 4. Validaciones SOLO para cuidadores CON centro asignado
+      if (role.rolName === "Cuidador" && user.id_centro_gerontologico) {
+        // 4.1 Verificar perfil médico
+        if (!cuidadorData) {
+          throw CustomError.badRequest("Perfil de cuidador incompleto");
+        }
+
+        // 4.2 Verificar aprobación
+        if (cuidadorData.aprobado === false) {
+          throw CustomError.badRequest(
+            "Espere aprobación del administrador del centro"
+          );
+        }
+      }
+
+      // 5. Construir respuesta
+      return UsuarioMapper.userAuthEntityFromObject({
         ...user.toObject(),
-        rolName: role.rolName, // Solo el nombre del rol
+        rolName: role.rolName,
         tiene_centro_asignado: !!user.id_centro_gerontologico,
         centro_info: centro
           ? {
@@ -113,23 +188,11 @@ export class UsuarioDatasourceImpl implements UsuarioDatasource {
               codigo_unico: centro.codigo_unico,
             }
           : null,
-      };
-
-      // Asegurar los IDs correctos
-      combinedObject._id = user._id;
-      combinedObject.id_rol = user.id_rol;
-
-      return UsuarioMapper.userAuthEntityFromObject(combinedObject);
-      console.log("combinedObject");
-      console.log("combinedObject");
-      console.log("combinedObject");
-      console.log(combinedObject);
-
-      return UsuarioMapper.userAuthEntityFromObject(combinedObject);
+        aprobado:
+          role.rolName === "Cuidador" ? cuidadorData?.aprobado : undefined,
+      });
     } catch (error) {
-      if (error instanceof CustomError) {
-        throw error;
-      }
+      if (error instanceof CustomError) throw error;
       console.error("Error en findByCredentials:", error);
       throw CustomError.internalServer();
     }

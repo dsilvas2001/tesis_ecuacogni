@@ -8,6 +8,7 @@ export * from "./datasources/referencia-signosv.datasource.impl";
 export * from "./datasources/signos-vitales.datasource.impl";
 export * from "./datasources/ejercicio-generado.datasource.impl";
 export * from "./datasources/ejercicio-resultado.datasource.impl";
+export * from "./datasources/cuidador.datasource.impl";
 
 // errors
 export * from "./errors/custom.error";
@@ -31,6 +32,7 @@ export * from "./repositories/signos-vitales.repository.impl";
 export * from "./repositories/ejercicio-generado.repository.impl";
 export * from "./repositories/ejercicio-resultado.repository.impl";
 export * from "./repositories/centro-gerontologico.repository.impl";
+export * from "./repositories/cuidador.repository.impl";
 
 // security
 export * from "./security/bcrypt.security";

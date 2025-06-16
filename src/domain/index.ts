@@ -11,6 +11,7 @@ export * from "./datasources/ejercicio-paciente.datasource";
 export * from "./datasources/ejercicio-generado.datasource";
 export * from "./datasources/ejercicio-resultado.datasource";
 export * from "./datasources/centro-gerontologico.datasource";
+export * from "./datasources/cuidador.datasource";
 
 // DTOS
 
@@ -50,6 +51,7 @@ export * from "./repositories/ejercicio-paciente.repository";
 export * from "./repositories/ejercicio-generado.repository";
 export * from "./repositories/ejercicio-resultado.repository";
 export * from "./repositories/centro-gerontologico.repository";
+export * from "./repositories/cuidador.repository";
 
 // Use Cases
 

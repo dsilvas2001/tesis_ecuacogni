@@ -26,6 +26,8 @@ export class ScraperResultDatasourceImpl {
   }
 
   async getScraperGeneral(categoria: string): Promise<any[]> {
+    console.log("INGRESANDO A SCRAPER GENERAL");
+
     const results: any[] = [];
 
     try {
@@ -108,6 +110,13 @@ export class ScraperResultDatasourceImpl {
   }
 
   private async guardarEjercicios(ejercicios: any[]): Promise<any[]> {
+    console.log("esta ingresando ejercicios:");
+    console.log("esta ingresando ejercicios:");
+    console.log("esta ingresando ejercicios:");
+    console.log("esta ingresando ejercicios:");
+    console.log("esta ingresando ejercicios:");
+    console.log("esta ingresando ejercicios:", ejercicios);
+
     const scrapingGroup = await ScrapingGroupModel.create({
       nombre: "Grupo de ejercicios generados",
       descripcion: this.searchCustom,

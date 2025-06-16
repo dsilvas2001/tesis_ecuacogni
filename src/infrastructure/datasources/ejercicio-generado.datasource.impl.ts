@@ -27,84 +27,9 @@ export class EjercicioGeneradoDatasourceImpl
     signosVitalesDto: SignosVitalesDto
   ): Promise<any[]> {
     const prompt = `
-    Eres un asistente especializado en generar ejercicios de estimulación cognitiva para adultos mayores (80 años en adelante). Tu objetivo es generar un ejercicio adaptado a la categoría "\${categoria}", asegurando que sea claro, accesible y adecuado para esta edad.
-    
-    ## 📌 Instrucciones Generales
-    - El ejercicio debe ser sencillo, comprensible y utilizar un lenguaje claro.
-    - Debe estar diseñado específicamente para estimular la **\${categoria}**.
-    - La presentación debe ser clara, con estructura definida y visualmente atractiva.
-    - Se deben incluir **opciones de respuesta (mínimo 4)**, incluso en ejercicios de completar.
-    - La respuesta correcta debe coincidir con una de las opciones, y las opciones deben ser variadas y lógicas según el contexto.
-    
-    ## 🧠 Categorías y Formatos Recomendados
-    
-    1. **Memoria** 🧠  
-       - Ejercicios que inviten a recordar datos o pequeñas anécdotas.  
-       - Ejemplos:  
-         - Recordar fragmentos de historias breves (por ejemplo, una cápsula histórica sobre Ecuador, como "La Independencia de Ecuador").  
-         - Ejercicios de recordar secuencias o listas de palabras.
-       - **Ejemplo:**  
-         *"La siguiente historia narra hechos importantes de Ecuador. Lee el siguiente párrafo y luego selecciona cuál de las siguientes afirmaciones es correcta:"*
-    
-    2. **Lenguaje** 🗣️  
-       - Ejercicios enfocados en la comprensión y estructuración del lenguaje.  
-       - Ejemplos:  
-         - Completar oraciones, identificar errores o formar palabras.  
-         - Ejercicio tipo relato: *"Juan lleva a su perro al parque"*, donde se puede pedir que el adulto complete la oración o responda una pregunta sobre el relato.
-       - **Ejemplo:**  
-         *"Lee la siguiente oración: 'Juan lleva a su ___ al parque'. Selecciona la opción que complete correctamente la frase."*
-    
-    3. **Atencion** 🔢  
-       - Ejercicios que requieran identificar patrones o reconocer palabras faltantes en un contexto.  
-       - Ejemplos:  
-         - Ejercicios de atención en el que se debe seleccionar la opción que completa correctamente una secuencia o frase.  
-         - Problemas matemáticos sencillos (como '2+2') o identificar diferencias en imágenes.
-       - **Ejemplo:**  
-         *"Observa la siguiente secuencia: 2, 4, __, 8. ¿Cuál es el número que falta?"*
-    
-    ## 🔹 Estructura del Ejercicio (Formato JSON)
-    Debe seguir el siguiente formato, y **SIEMPRE incluir opciones de respuesta (mínimo 4)**:
-    
-    [
-      {
-        "titulo": "Ejemplo: Encuentra la Fruta Correcta",
-        "descripcion": "Ejercicio de memoria en el que debes recordar una fruta mencionada previamente.",
-        "tipo": "completar",
-        "dificultad": "baja",
-        "instrucciones": "Selecciona la fruta correcta para completar la frase.",
-        "contenido": {
-          "tipo_contenido": "texto",
-          "contenido": "La fruta que es roja y dulce es:"
-        },
-        "opciones": [
-          { "texto": "Manzana", "imagen": "" },
-          { "texto": "Plátano", "imagen": "" },
-          { "texto": "Fresa", "imagen": "" },
-          { "texto": "Naranja", "imagen": "" }
-        ],
-        "respuesta_correcta": ["Fresa"]
-      }
-    ]
-    
-    ⚠ **Reglas Importantes:**
-    - **Todos los ejercicios deben incluir opciones de respuesta (mínimo 4).**
-    - **Incluso en ejercicios de completar deben presentarse opciones.**
-    - **La respuesta correcta debe coincidir con una de las opciones.**
-    - **Las opciones deben ser variadas y coherentes con el contexto.**
-    
-    📢 **Ejemplo de una pregunta para la categoría "Razonamiento":**  
-    Pregunta: ¿Cuánto es 2 + 2?  
-    Opciones: 1, 2, 3, 4.  
-    Respuesta correcta: 4.
-    
-    🔹 **Genera un ejercicio siguiendo estas reglas y adaptado a la categoría "\${categoria}".**
-    
-    **Notas adicionales según la categoría:**  
-    - Si **\${categoria}** es "Lenguaje", enfoca el ejercicio en comprender y completar relatos o identificar errores en oraciones.  
-    - Si es "Memoria", crea ejercicios basados en recordar pequeños fragmentos históricos o listas simples de palabras o datos relevantes (por ejemplo, hechos históricos de Ecuador).  
-    - Si es "Atención" o "Razonamiento", diseña ejercicios que involucren identificar patrones o completar secuencias, asegurando que sean intuitivos y directos para la población adulta mayor.
-    
-    `;
+Genera 3 palabras clave para buscar contenido sobre ${categoria} en adultos mayores. 
+Ejemplo para "memoria": "ejercicios memoria ancianos", "recordar historias cortas", "juegos cognitivos". 
+Devuelve SOLO las palabras clave separadas por comas.`;
 
     // Llamar a la IA para generar la cadena de búsqueda
     const openAIDto = OpenAIDto.create({ prompt })[1];
@@ -113,10 +38,18 @@ export class EjercicioGeneradoDatasourceImpl
       CadenaBusquedaZod
     );
 
+    console.log("Cadena de búsqueda generada:", openAIResponse.cadena);
+
     // Paso 2: Invocar el web scraping con la cadena de búsqueda
     const resultadosScraping = await this.scraperDatasource.getScraperGeneral(
       openAIResponse.cadena
     );
+
+    console.log("Resultados del scraping:");
+    console.log("Resultados del scraping:");
+    console.log("Resultados del scraping:");
+    console.log("Resultados del scraping:");
+    console.log("Resultados del scraping:", resultadosScraping);
 
     //EJERCICIOS
     // Paso 3: Generar ejercicios basados en la categoría y los resultados del scraping
@@ -178,6 +111,7 @@ export class EjercicioGeneradoDatasourceImpl
               `;
           }
         })();
+        console.log("Category-specific prompt:", resultadosScraping);
 
         // Construir el prompt para ChatGPT (manteniendo el contenido original)
         const prompt = `

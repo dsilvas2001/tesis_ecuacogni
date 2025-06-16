@@ -48,6 +48,7 @@ export class UsuarioController {
         nombre: user.nombre,
         apellido: user.apellido,
         email: user.email,
+        password: user.password, // No deberías enviar la contraseña en el token
         rol: user.roles, // Nombre del rol
         tiene_centro_asignado: user.tiene_centro_asignado,
         es_administrador: user.es_administrador,
@@ -61,6 +62,7 @@ export class UsuarioController {
           nombre: user.nombre,
           apellido: user.apellido,
           email: user.email,
+          password: user.password, // No deberías enviar la contraseña en el token
           rol: user.roles, // Nombre del rol
           experiencia_anios: user.experiencia_anios,
           tiene_centro_asignado: user.tiene_centro_asignado,

@@ -1,4 +1,4 @@
-import { UsuariosModel } from "../../data/mongodb/models";
+import { MedicosModel, UsuariosModel } from "../../data/mongodb/models";
 import { CentroGerontologicoModel } from "../../data/mongodb/models/centro-gerontologico.model";
 import {
   CentroDatasource,
@@ -28,6 +28,11 @@ export class CentroDatasourceImpl implements CentroDatasource {
         codigo_unico,
       });
 
+      await MedicosModel.findOneAndUpdate(
+        { id_usuario: crearCentroDto.id_administrador },
+        { aprobado: true }, // Aprobación automática
+        { new: true }
+      );
       // Asignar el centro al administrador
       await UsuariosModel.findByIdAndUpdate(crearCentroDto.id_administrador, {
         id_centro_gerontologico: centro._id,
